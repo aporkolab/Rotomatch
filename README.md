@@ -2,7 +2,7 @@
 
 [![CI/CD Pipeline](https://github.com/APorkolab/Rotomatch/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/APorkolab/Rotomatch/actions/workflows/ci-cd.yml)
 [![codecov](https://codecov.io/gh/APorkolab/Rotomatch/branch/main/graph/badge.svg)](https://codecov.io/gh/APorkolab/Rotomatch)
-[![Performance](https://img.shields.io/badge/Lighthouse-90%2B-green)](https://rotomatch.porkolab.hu)
+[![Performance](https://img.shields.io/badge/Lighthouse-90%2B-green)](https://rotomatch.aporkolab.com)
 [![License](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
 A sophisticated, enterprise-grade memory matching game built with Angular 19, featuring modern architecture, comprehensive testing, and advanced game mechanics.

@@ -33,7 +33,7 @@
     "version:major": "npm version major && git push --follow-tags"
   },
   "private": true,
-  "homepage": "https://rotomatch.porkolab.hu",
+  "homepage": "https://rotomatch.aporkolab.com",
   "dependencies": {
     "@angular/animations": "^19.2.14",
     "@angular/cli": "^19.2.15",
