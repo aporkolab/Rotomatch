@@ -12,7 +12,6 @@ coverage/
 lighthouserc.cjs
 
 # Test setup files
-src/test.ts
 
 # Lock files
 package-lock.json
