@@ -4,7 +4,7 @@
 module.exports = function (config) {
   config.set({
     basePath: '',
-    frameworks: ['jasmine', '@angular-devkit/build-angular'],
+    frameworks: ['jasmine'],
     plugins: [
       require('karma-jasmine'),
       require('karma-chrome-launcher'),
@@ -26,7 +26,12 @@ module.exports = function (config) {
     coverageReporter: {
       dir: require('path').join(__dirname, './coverage/matching-game-angular'),
       subdir: '.',
-      reporters: [{ type: 'html' }, { type: 'text-summary' }]
+      reporters: [
+        { type: 'html' },
+        { type: 'text-summary' },
+        // lcov.info is what the CI job uploads to Codecov.
+        { type: 'lcovonly', subdir: '.', file: 'lcov.info' }
+      ]
     },
     reporters: ['progress', 'kjhtml'],
     port: 9876,

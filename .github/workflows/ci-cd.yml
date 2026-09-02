@@ -43,6 +43,8 @@ jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,10 +61,24 @@ jobs:
       - name: Run unit tests
         run: npm run test:ci
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
+      # Always retrievable from the run, with no external service needed.
+      - name: Upload coverage report artifact
+        uses: actions/upload-artifact@v4
         with:
-          file: ./coverage/lcov.info
+          name: coverage
+          path: coverage/matching-game-angular/
+          retention-days: 14
+
+      # Codecov refuses tokenless uploads, so this only runs once CODECOV_TOKEN
+      # is set in the repository secrets. Until then the artifact above is the
+      # coverage report.
+      - name: Upload coverage to Codecov
+        if: env.CODECOV_TOKEN != ''
+        uses: codecov/codecov-action@v5
+        with:
+          # karma writes here; the old ./coverage/lcov.info never existed.
+          files: ./coverage/matching-game-angular/lcov.info
+          token: ${{ env.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
   security-audit:

@@ -121,14 +121,6 @@ Four things needed hand-fixing after the schematic:
 
 `statsJson` is supported by the application builder, so `npm run build:analyze` still works.
 
-## Known gap, unrelated to this pass
-
-The CI `test` job uploads `./coverage/lcov.info` to Codecov, but `karma.conf.cjs` only
-configures the `html` and `text-summary` reporters and writes to
-`coverage/matching-game-angular/`. Codecov has never received data. The step has
-`fail_ci_if_error: false`, so it passes silently. Pre-existing; fixing it needs an
-`lcovonly` reporter and a path that matches.
-
 ## Verification
 
 Run on this branch, all green. The production build was also served with
