@@ -6,6 +6,7 @@ import { GameStateService } from 'src/app/service/game-state.service';
 import { GameLogicService } from 'src/app/service/game-logic.service';
 import { BsModalService } from 'ngx-bootstrap/modal';
 import { Card } from 'src/app/model/card';
+import { signal } from '@angular/core';
 import { of, Subject } from 'rxjs';
 
 describe('GameComponent', () => {
@@ -13,10 +14,20 @@ describe('GameComponent', () => {
   let fixture: ComponentFixture<GameComponent>;
   let gameLogicService: jasmine.SpyObj<GameLogicService>;
   let modalService: jasmine.SpyObj<BsModalService>;
+  let cardsSignal: ReturnType<typeof signal<Card[]>>;
+  let scoreSignal: ReturnType<typeof signal<number>>;
+  let isProcessingSignal: ReturnType<typeof signal<boolean>>;
 
   beforeEach(async () => {
+    cardsSignal = signal<Card[]>([]);
+    scoreSignal = signal(0);
+    isProcessingSignal = signal(false);
+
     const gameLogicSpy = jasmine.createSpyObj('GameLogicService', ['newGame', 'revealCard', 'loadBestResults'], {
-      // Expose observables for the component to subscribe to
+      // The template reads these signals; they are what keeps an OnPush view in sync.
+      cards: cardsSignal.asReadonly(),
+      score: scoreSignal.asReadonly(),
+      isProcessing: isProcessingSignal.asReadonly(),
       cardList$: of([]),
       score$: of(0),
       isProcessing$: of(false),
@@ -67,6 +78,39 @@ describe('GameComponent', () => {
     const template: any = 'mockTemplate';
     component.openModal(template);
     void expect(modalService.show).toHaveBeenCalledWith(template, { class: 'modal-sm' });
+  });
+
+  // The board used to freeze mid-move: the component sampled the state
+  // observables with subscribe().unsubscribe() inside template methods, which
+  // never marks an OnPush view dirty, so nothing repainted until an unrelated
+  // click happened to trigger change detection.
+  it('should repaint when game state changes, with no user event in between', async () => {
+    fixture.autoDetectChanges(true);
+
+    isProcessingSignal.set(true);
+    await fixture.whenStable();
+    void expect(fixture.nativeElement.textContent).toContain('Processing');
+
+    isProcessingSignal.set(false);
+    await fixture.whenStable();
+    void expect(fixture.nativeElement.textContent).not.toContain('Processing');
+  });
+
+  it('should reflect attempts and progress from the state signals', async () => {
+    fixture.autoDetectChanges(true);
+
+    cardsSignal.set([
+      new Card({ id: 1, name: 'A', icon: '', flipped: true, matched: true }),
+      new Card({ id: 2, name: 'A', icon: '', flipped: true, matched: true }),
+      new Card({ id: 3, name: 'B', icon: '', flipped: false, matched: false }),
+      new Card({ id: 4, name: 'B', icon: '', flipped: false, matched: false })
+    ]);
+    scoreSignal.set(3);
+    await fixture.whenStable();
+
+    void expect(component.currentAttempts()).toBe(3);
+    void expect(component.gameProgress()).toBe(50);
+    void expect(fixture.nativeElement.textContent).toContain('50%');
   });
 
   it('should call newGame when restartGame is called', () => {

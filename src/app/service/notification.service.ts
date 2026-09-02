@@ -107,12 +107,20 @@ export class NotificationService {
    * Builds notification configuration
    */
   private buildConfig(config?: NotificationConfig): Partial<IndividualConfig> {
-    return {
+    const options: Partial<IndividualConfig> = {
       ...this.defaultConfig,
       timeOut: config?.timeout ?? this.defaultConfig.timeOut,
       closeButton: config?.closeButton ?? this.defaultConfig.closeButton,
-      progressBar: config?.progressBar ?? this.defaultConfig.progressBar,
-      positionClass: config?.positionClass
+      progressBar: config?.progressBar ?? this.defaultConfig.progressBar
     };
+
+    // Only override the globally configured positionClass when a caller actually
+    // supplies one. Passing `undefined` shadows the global default, and ngx-toastr
+    // then falls back to an empty string and throws on classList.add('').
+    if (config?.positionClass != null) {
+      options.positionClass = config.positionClass;
+    }
+
+    return options;
   }
 }

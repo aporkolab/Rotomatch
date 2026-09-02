@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, Signal, computed } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { map, tap, catchError } from 'rxjs/operators';
@@ -197,6 +197,19 @@ export class GameLogicService implements OnDestroy {
   public resetGame(): void {
     this.gameStateManager.resetGame();
   }
+
+  // Signal-backed state for templates. A signal read inside an OnPush template
+  // registers a reactive dependency, so the view repaints as the game advances.
+  // The observables below do not: the component samples them synchronously and
+  // nothing ever marks the view dirty, which left the board frozen mid-move.
+  public readonly cards: Signal<Card[]> = computed(() => this.gameStateManager.cards() ?? []);
+
+  public readonly score: Signal<number> = computed(() => {
+    const stats = this.gameStateManager.currentStats();
+    return stats?.attempts != null && stats.attempts > 0 ? stats.attempts : 0;
+  });
+
+  public readonly isProcessing: Signal<boolean> = this.gameStateManager.isProcessing;
 
   // Observable properties that components expect
   public readonly cardList$ = toObservable(this.gameStateManager.cards).pipe(map(cards => cards ?? []));
