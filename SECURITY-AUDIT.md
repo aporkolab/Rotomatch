@@ -1,147 +1,102 @@
 # Security Audit Report
 
-**Generated:** 2025-09-10  
-**Project:** Rotomatch v1.0.0  
+**Generated:** 2026-09-02
+**Project:** Rotomatch v1.0.0
 **Audit Level:** Moderate and above
 
-## 🔒 Summary
+## Summary
 
-- **Total Vulnerabilities Found:** 8 → 5 (after fixes)
-- **Critical:** 0 
-- **High:** 0
-- **Moderate:** 2
-- **Low:** 3
+`npm audit` before this pass: **74 vulnerabilities** (3 critical, 48 high, 20 moderate, 3 low).
+After: **34 vulnerabilities** (1 critical, 24 high, 7 moderate, 2 low).
 
-## ✅ Resolved Vulnerabilities
+Every remaining finding is blocked on an Angular major upgrade — see "Remaining" below.
+There is nothing left that a non-breaking update can fix.
 
-### 1. on-headers < 1.1.0 (CVE-2025-7339)
-- **Severity:** Low
-- **Issue:** HTTP response header manipulation vulnerability
-- **Status:** ✅ **FIXED** via `npm audit fix`
-- **Solution:** Upgraded to version 1.1.0
+## What was done
 
-### 2. compression/serve dependency chain
-- **Severity:** Low  
-- **Issue:** Dependent on vulnerable on-headers
-- **Status:** ✅ **FIXED** via dependency upgrade
+1. **Regenerated `package-lock.json`.** It was out of sync with `package.json` (missing the
+   platform-specific `@rollup/rollup-*` optional packages), so `npm ci` failed outright and
+   `npm i` silently pinned stale transitive versions. All transitive dependencies now resolve
+   to their patched releases.
+2. **Bumped Angular to the end of the v19 line:** framework packages `19.2.14 → 19.2.25`,
+   CLI and `@angular-devkit/build-angular` `19.2.15 → 19.2.27`.
+3. **Dropped the `fix@^0.0.6` dependency.** It was never imported anywhere in `src/`; it only
+   dragged in vulnerable `underscore` and `underscore.string`.
 
-## ⚠️ Remaining Vulnerabilities
+## Resolved
 
-### 1. underscore.string < 3.3.5 (GHSA-v2p6-4mp7-3r9v)
-- **Severity:** MODERATE
-- **Package:** `fix@0.0.6 → underscore.string@1.1.4`
-- **Issue:** Regular Expression Denial of Service (ReDoS) in `unescapeHTML` function
-- **Impact:** 
-  - Performance degradation (~2s for 50k characters)
-  - Exponential slowdown with larger inputs
-  - Only affects apps using `unescapeHTML` function with user-controlled input
-- **Risk Assessment:** 🟡 **LOW PRODUCTION RISK**
-  - The `fix` package appears to be a development dependency
-  - Unlikely to process large HTML strings in production
-  - Would require specific attack targeting the `unescapeHTML` function
-- **Mitigation:** 
-  - Monitor for `fix` package usage and potential replacements
-  - Consider `npm audit fix --force` for future major releases
-  - Input validation on any HTML processing
+Transitive packages, now on patched versions:
 
-### 2. Vite 6.0.0-6.3.5 (GHSA-g4jq-h2w9-997c, GHSA-jqfw-vq24-v9c3)
-- **Severity:** MODERATE  
-- **Package:** `@angular/build@19.2.15 → vite@6.2.7`
-- **Issues:**
-  - **File serving bypass:** Files with same name prefix as public directory can be served
-  - **HTML file access:** `server.fs` settings not applied to HTML files
-- **Impact:**
-  - Unauthorized file access during development
-  - Exposure of sensitive files outside allowed directories
-  - Only affects development server when exposed to network
-- **Risk Assessment:** 🟡 **LOW PRODUCTION RISK**
-  - Affects only **development server**, not production builds
-  - Requires explicit network exposure (`--host` flag)
-  - Production builds use different serving mechanism
-- **Mitigation:**
-  - Avoid exposing dev server to untrusted networks
-  - Use production builds for any public deployment
-  - Monitor Angular CLI updates for Vite upgrades
+| Package | Was | Now |
+| --- | --- | --- |
+| `websocket-driver` (critical) | 0.7.4 | 0.7.5 |
+| `shell-quote` (critical) | 1.8.3 | 1.10.0 |
+| `js-yaml` | 4.1.0 | 4.3.2 |
+| `node-forge` | 1.3.1 | 1.4.0 |
+| `glob` | 10.4.5 | 10.5.0 |
+| `brace-expansion` | 1.1.12 / 2.0.2 | 1.1.18 / 2.1.4 |
+| `minimatch` | 3.1.2 / 9.0.5 | 3.1.5 / 9.0.9 |
+| `engine.io` | 6.6.4 | 6.6.9 |
+| `socket.io-parser` | 4.2.4 | 4.2.7 |
+| `fast-uri` | 3.1.0 | 3.1.6 |
+| `immutable` | 5.1.3 | 5.1.9 |
+| `tmp` | 0.2.5 | 0.2.7 |
+| `ip-address` | 10.0.1 | 10.7.0 |
+| `postcss` | 8.5.2 | 8.5.12 |
+| `rollup` | 4.34.8 | 4.59.0 |
+| `qs` | older | 6.15.3 |
+| `lodash` | older | 4.18.1 |
+| `ajv` | older | 6.15.0 / 8.18.0 |
+| `webpack` | older | 5.105.0 |
+| `underscore.string`, `underscore` | 1.1.4 | removed |
 
-## 🛡️ Security Recommendations
+Angular-side advisories closed by 19.2.25 / 19.2.27, among them:
 
-### Immediate Actions (Production Safe)
-1. ✅ **Completed:** Applied `npm audit fix` for non-breaking changes
-2. ✅ **Completed:** Documented remaining vulnerabilities
-3. 🔄 **Ongoing:** Monitor dependency updates for safer upgrade paths
+- XSRF token leakage via protocol-relative URLs (`@angular/common`, fixed 19.2.16)
+- Template and attribute namespace sanitization bypass / XSS (`@angular/core`, `@angular/compiler`, fixed 19.2.22)
+- OOM DoS in number formatting via `digitsInfo` (`@angular/common`, fixed 19.2.23)
+- Information leak via default caching of credentialed requests in `HttpTransferCache` (fixed 19.2.23)
+- XSS via unsanitized SVG script attributes and i18n attribute bindings (fixed 19.2.18 / 19.2.20)
 
-### Future Considerations
-1. **Development Environment:**
-   - Never expose `npm run dev` to untrusted networks
-   - Use `npm run build && npm run start:prod` for any external access
-   - Regular security audits with each Angular CLI update
+## Remaining — blocked on an Angular major upgrade
 
-2. **Dependency Management:**
-   - Schedule quarterly dependency review
-   - Test `npm audit fix --force` in development branch
-   - Consider alternative packages for `fix` dependency
+Angular 19 has reached the end of its LTS window: `19.2.25` is the last release on that line,
+and several advisories carry **no v19 patch at all**. They are only fixed in Angular 20+.
 
-3. **CI/CD Integration:**
-   - Add `npm audit --audit-level=moderate` to CI pipeline
-   - Configure alerts for new HIGH/CRITICAL vulnerabilities
-   - Automated dependency updates for security patches
+Framework advisories with no v19 fix (`<= 19.2.25`):
 
-## 📋 Audit Command Reference
+- `@angular/core` — Client Hydration DOM Clobbering & response-cache poisoning (high)
+- `@angular/core` / `@angular/compiler` — i18n XSS via event-handler attributes (high)
+- `@angular/common` — Cache-key ambiguity in `HttpTransferCache`, cross-request response reuse (high)
+- `@angular/common` — Weak 32-bit cache-key hashing in `HttpTransferCache` (high)
+- `@angular/common` — OOM DoS in `formatDate` (high)
 
-```bash
-# Run security audit
-npm run audit:security
+Build-chain packages pinned by `@angular-devkit/build-angular@19.2.27` and unpatchable
+without it moving: `tar` (critical), `vite`, `piscina`, `postcss` (build-angular's nested
+copy), `webpack-dev-server`, `serialize-javascript`, `http-proxy-middleware`, `less` /
+`image-size`, `sigstore` / `@sigstore/*`, `pacote`, `copy-webpack-plugin`, `sockjs`,
+`uuid`, `@babel/core`, `esbuild`.
 
-# Fix non-breaking vulnerabilities  
-npm audit fix
+`ngx-bootstrap@19.0.2` also has an advisory with no v19 fix; it is patched in v22, which
+in turn requires Angular 20+.
 
-# Fix all vulnerabilities (including breaking changes)
-npm audit fix --force
+**Exposure note:** the build-chain findings are dev-time only — they do not ship in the
+production bundle. The `@angular/core` and `@angular/common` ones do, and the deployment
+at `rotomatch.aporkolab.com` is a client-rendered SPA, so the hydration and
+`HttpTransferCache` findings need SSR to be exploitable and the i18n ones need i18n
+attribute bindings. The XSS advisories are still the ones worth prioritising.
 
-# Check specific audit levels
-npm audit --audit-level=high
-npm audit --audit-level=moderate
+**Next step:** `ng update @angular/core@20 @angular/cli@20`, then step to 21 and 22, and
+bump `ngx-bootstrap` / `ngx-toastr` alongside. That is a separate change with real
+regression risk and should not ride along with a lockfile refresh.
+
+## Verification
+
+Run on this branch, all green:
+
 ```
-
-## 🔍 Latest Vulnerability Details (Updated 19:08 UTC)
-
-### CVE-2025-58751 & CVE-2025-58752 (Vite Vulnerabilities)
-**Published:** September 8-9, 2025  
-**CVSS Score:** 2.3/10 (Low)
-
-#### CVE-2025-58751: File serving bypass
-- **Attack Vector:** Network-based, requires `--host` flag exposure
-- **Impact:** Files with same name prefix as public directory can be served
-- **Exploit Requirements:**
-  - Dev server explicitly exposed to network (`--host` option)
-  - Public directory feature enabled (default)
-  - Symlink exists in public directory
-
-#### CVE-2025-58752: HTML file access bypass
-- **Attack Vector:** Network-based, affects dev and preview servers
-- **Impact:** Any HTML files on machine served regardless of `server.fs` settings
-- **Exploit Requirements:**
-  - Dev server exposed to network (`--host` option)
-  - `appType: 'spa'` (default) or `appType: 'mpa'`
-
-### 📊 **Current Risk Assessment:**
-
-| Vulnerability | Production Impact | Development Impact | Action Required |
-|---------------|-------------------|--------------------|-----------------|
-| underscore.string ReDoS | 🟢 **NONE** - Dev only | 🟡 **LOW** - Rare usage | Monitor for fix@0.0.3+ |
-| Vite CVE-2025-58751 | 🟢 **NONE** - Build only | 🟡 **LOW** - Need --host | Never expose dev server |
-| Vite CVE-2025-58752 | 🟢 **NONE** - Build only | 🟡 **LOW** - Need --host | Never expose dev server |
-
-## 🔄 Next Review
-
-**Scheduled:** 2025-12-10 (Quarterly)  
-**Trigger Events:**
-- Angular major version release
-- High/Critical vulnerabilities reported
-- Before production deployment
-- Vite 6.3.6+ becomes available in Angular CLI
-
----
-
-**Report Generated By:** Automated Security Audit  
-**Last Updated:** 2025-09-10 19:08 UTC
+npm run lint          # 0 errors, 58 warnings (pre-existing no-magic-numbers / no-console)
+npm run format:check  # clean
+npm run test:ci       # 21/21 passing
+npm run build         # production bundle 748 kB raw / 158 kB transfer
+```
