@@ -7,10 +7,12 @@
 ## Summary
 
 `npm audit` before this pass: **74 vulnerabilities** (3 critical, 48 high, 20 moderate, 3 low).
-After: **34 vulnerabilities** (1 critical, 24 high, 7 moderate, 2 low).
+After the lockfile refresh: **34** (1 critical, 24 high, 7 moderate, 2 low).
+After the Angular 19 → 21 upgrade: **7** (0 critical, 3 high, 4 moderate).
 
-Every remaining finding is blocked on an Angular major upgrade — see "Remaining" below.
-There is nothing left that a non-breaking update can fix.
+Nothing that ships in the production bundle is flagged any more. All seven remaining
+findings sit inside `@angular-devkit/build-angular`, the legacy webpack builder, and are
+dev-time only.
 
 ## What was done
 
@@ -22,6 +24,9 @@ There is nothing left that a non-breaking update can fix.
    CLI and `@angular-devkit/build-angular` `19.2.15 → 19.2.27`.
 3. **Dropped the `fix@^0.0.6` dependency.** It was never imported anywhere in `src/`; it only
    dragged in vulnerable `underscore` and `underscore.string`.
+4. **Upgraded Angular 19 → 21** (`ng update` through 20, then 21), plus `ngx-bootstrap`
+   19 → 21, `ngx-toastr` 19 → 20, `@angular-eslint/*` 20 → 21, TypeScript 5.8 → 5.9.
+   Angular 19 is out of LTS and several advisories have no v19 patch at all.
 
 ## Resolved
 
@@ -50,45 +55,58 @@ Transitive packages, now on patched versions:
 | `webpack` | older | 5.105.0 |
 | `underscore.string`, `underscore` | 1.1.4 | removed |
 
-Angular-side advisories closed by 19.2.25 / 19.2.27, among them:
+Angular framework advisories — all clear now. Closed within the v19 line by 19.2.25:
 
 - XSRF token leakage via protocol-relative URLs (`@angular/common`, fixed 19.2.16)
+- XSS via unsanitized SVG script attributes and i18n attribute bindings (fixed 19.2.18 / 19.2.20)
 - Template and attribute namespace sanitization bypass / XSS (`@angular/core`, `@angular/compiler`, fixed 19.2.22)
 - OOM DoS in number formatting via `digitsInfo` (`@angular/common`, fixed 19.2.23)
 - Information leak via default caching of credentialed requests in `HttpTransferCache` (fixed 19.2.23)
-- XSS via unsanitized SVG script attributes and i18n attribute bindings (fixed 19.2.18 / 19.2.20)
 
-## Remaining — blocked on an Angular major upgrade
-
-Angular 19 has reached the end of its LTS window: `19.2.25` is the last release on that line,
-and several advisories carry **no v19 patch at all**. They are only fixed in Angular 20+.
-
-Framework advisories with no v19 fix (`<= 19.2.25`):
+Closed only by moving off v19 — these had **no v19 patch** (`<= 19.2.25`):
 
 - `@angular/core` — Client Hydration DOM Clobbering & response-cache poisoning (high)
 - `@angular/core` / `@angular/compiler` — i18n XSS via event-handler attributes (high)
 - `@angular/common` — Cache-key ambiguity in `HttpTransferCache`, cross-request response reuse (high)
 - `@angular/common` — Weak 32-bit cache-key hashing in `HttpTransferCache` (high)
 - `@angular/common` — OOM DoS in `formatDate` (high)
+- `ngx-bootstrap` 19.0.2 — no v19 fix; patched from v21
 
-Build-chain packages pinned by `@angular-devkit/build-angular@19.2.27` and unpatchable
-without it moving: `tar` (critical), `vite`, `piscina`, `postcss` (build-angular's nested
-copy), `webpack-dev-server`, `serialize-javascript`, `http-proxy-middleware`, `less` /
-`image-size`, `sigstore` / `@sigstore/*`, `pacote`, `copy-webpack-plugin`, `sockjs`,
-`uuid`, `@babel/core`, `esbuild`.
+## Angular 19 → 21: what it took
 
-`ngx-bootstrap@19.0.2` also has an advisory with no v19 fix; it is patched in v22, which
-in turn requires Angular 20+.
+`ng update` handled almost everything. Three things needed hand-fixing:
 
-**Exposure note:** the build-chain findings are dev-time only — they do not ship in the
-production bundle. The `@angular/core` and `@angular/common` ones do, and the deployment
-at `rotomatch.aporkolab.com` is a client-rendered SPA, so the hydration and
-`HttpTransferCache` findings need SSR to be exploitable and the i18n ones need i18n
-attribute bindings. The XSS advisories are still the ones worth prioritising.
+- `ngx-bootstrap` 21 dropped `Module.forRoot()`; its directives are standalone and
+  `BsModalService` is `providedIn: 'root'`, so the `importProvidersFrom(ModalModule.forRoot(),
+  CollapseModule.forRoot())` call in `src/main.ts` was simply deleted. `CollapseModule` is
+  already imported by `AppComponent` directly.
+- The control-flow migration rewrote `*ngFor ... trackBy: trackByIndex` as
+  `track trackByIndex($index, item)`, but `trackByIndex` takes one argument. Changed to
+  `track $index` in the two literal-array loops in `game.component.html`.
+- `ngx-toastr` 20 peers on Angular `^21`, so 20 was not a valid stop — 21 is the first
+  version where `ngx-bootstrap` and `ngx-toastr` line up again. Angular 22 is not viable
+  yet: `ngx-toastr` has no v22-compatible release.
 
-**Next step:** `ng update @angular/core@20 @angular/cli@20`, then step to 21 and 22, and
-bump `ngx-bootstrap` / `ngx-toastr` alongside. That is a separate change with real
-regression risk and should not ride along with a lockfile refresh.
+Migrations also converted `game.component.html` and `home.component.html` to block control
+flow (`@if` / `@for`), moved deprecated bootstrap options to `provideZoneChangeDetection()`,
+and switched `moduleResolution` to `bundler`.
+
+## Remaining — all dev-time
+
+Seven findings, all reached through `@angular-devkit/build-angular@21.2.22` (the legacy
+webpack builder): `image-size` and `less` (high), `webpack-dev-server`, `sockjs`, `uuid`
+and `@angular-devkit/build-webpack` (moderate).
+
+None of them ship in the production bundle — they are build-server and asset-pipeline code.
+They disappear entirely by migrating to the modern esbuild-based builder:
+
+```
+ng update @angular/cli --name use-application-builder
+```
+
+That changes the output layout (`dist/matching-game-angular/browser`), so the
+`start:prod` script, `lighthouserc.cjs` and the CI deploy jobs need their paths updated
+alongside. Left out of this change deliberately.
 
 ## Verification
 
@@ -98,5 +116,5 @@ Run on this branch, all green:
 npm run lint          # 0 errors, 58 warnings (pre-existing no-magic-numbers / no-console)
 npm run format:check  # clean
 npm run test:ci       # 21/21 passing
-npm run build         # production bundle 748 kB raw / 158 kB transfer
+npm run build         # production bundle 767 kB raw / 162 kB transfer
 ```

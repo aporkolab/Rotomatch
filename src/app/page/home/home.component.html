@@ -79,54 +79,56 @@
       </h3>
 
       <div class="deck-size-grid">
-        <div
-          class="deck-size-card"
-          *ngFor="let size of deckSizes; trackBy: trackByDeckSize"
-          [class.selected]="selectedDeckSize === size"
-          [class.recommended]="size === 12"
-          (click)="selectDeckSize(size)"
-        >
-          <div class="deck-size-number">{{ size }}</div>
-          <div class="deck-size-label">{{ size / 2 }} pairs</div>
-          <div class="difficulty-indicator" [ngClass]="getDifficultyClass(size)"></div>
-          <span class="recommended-badge" *ngIf="size === 12">Recommended</span>
-        </div>
+        @for (size of deckSizes; track trackByDeckSize($index, size)) {
+          <div
+            class="deck-size-card"
+            [class.selected]="selectedDeckSize === size"
+            [class.recommended]="size === 12"
+            (click)="selectDeckSize(size)"
+          >
+            <div class="deck-size-number">{{ size }}</div>
+            <div class="deck-size-label">{{ size / 2 }} pairs</div>
+            <div class="difficulty-indicator" [ngClass]="getDifficultyClass(size)"></div>
+            @if (size === 12) {
+              <span class="recommended-badge">Recommended</span>
+            }
+          </div>
+        }
       </div>
     </div>
 
     <!-- Statistics Preview -->
-    <div class="stats-preview" *ngIf="hasGameHistory">
-      <h3 class="section-title">
-        <i class="fas fa-chart-line"></i>
-        Your Progress
-      </h3>
-
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon">
-            <i class="fas fa-trophy"></i>
+    @if (hasGameHistory) {
+      <div class="stats-preview">
+        <h3 class="section-title">
+          <i class="fas fa-chart-line"></i>
+          Your Progress
+        </h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-trophy"></i>
+            </div>
+            <div class="stat-value">{{ totalWins }}</div>
+            <div class="stat-label">Games Won</div>
           </div>
-          <div class="stat-value">{{ totalWins }}</div>
-          <div class="stat-label">Games Won</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon">
-            <i class="fas fa-medal"></i>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-medal"></i>
+            </div>
+            <div class="stat-value">{{ achievementCount }}</div>
+            <div class="stat-label">Achievements</div>
           </div>
-          <div class="stat-value">{{ achievementCount }}</div>
-          <div class="stat-label">Achievements</div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon">
-            <i class="fas fa-percentage"></i>
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fas fa-percentage"></i>
+            </div>
+            <div class="stat-value">{{ winRate }}%</div>
+            <div class="stat-label">Win Rate</div>
           </div>
-          <div class="stat-value">{{ winRate }}%</div>
-          <div class="stat-label">Win Rate</div>
         </div>
       </div>
-    </div>
+    }
 
     <!-- Start Game Button -->
     <div class="start-game-section">
@@ -148,15 +150,19 @@
           <span>How to Play</span>
         </button>
 
-        <button class="quick-action-btn" routerLink="/statistics" *ngIf="hasGameHistory">
-          <i class="fas fa-chart-bar"></i>
-          <span>Statistics</span>
-        </button>
+        @if (hasGameHistory) {
+          <button class="quick-action-btn" routerLink="/statistics">
+            <i class="fas fa-chart-bar"></i>
+            <span>Statistics</span>
+          </button>
+        }
 
-        <button class="quick-action-btn" (click)="continueGame()" *ngIf="hasSavedGame">
-          <i class="fas fa-play-circle"></i>
-          <span>Continue Game</span>
-        </button>
+        @if (hasSavedGame) {
+          <button class="quick-action-btn" (click)="continueGame()">
+            <i class="fas fa-play-circle"></i>
+            <span>Continue Game</span>
+          </button>
+        }
       </div>
     </div>
   </div>
