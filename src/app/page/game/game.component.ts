@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { Card } from 'src/app/model/card';
-import { Subscription, Observable } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { GameStateService } from 'src/app/service/game-state.service';
 import { GameLogicService } from 'src/app/service/game-logic.service';
 import { BsModalService, BsModalRef } from 'ngx-bootstrap/modal';
@@ -30,20 +30,13 @@ export class GameComponent implements OnInit, OnDestroy {
   private readonly subscriptions = new Subscription();
   public modalRef?: BsModalRef;
 
-  public cardList$: Observable<Card[]>;
-  public score$: Observable<number>;
-  public isProcessing$: Observable<boolean>;
   public bestResults: { [key: number]: number } = {};
 
   public constructor(
     private readonly data: GameStateService,
     public gameLogic: GameLogicService,
     private readonly modalService: BsModalService
-  ) {
-    this.cardList$ = this.gameLogic.cardList$;
-    this.score$ = this.gameLogic.score$;
-    this.isProcessing$ = this.gameLogic.isProcessing$;
-  }
+  ) {}
 
   public ngOnInit(): void {
     const deckSizeSub = this.data.currentSelectedDeckSize.subscribe(deckSize => {
@@ -140,16 +133,11 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   public currentAttempts(): number {
-    // This will come from the score observable
-    let currentScore = 0;
-    this.score$.subscribe(score => (currentScore = score)).unsubscribe();
-    return currentScore;
+    return this.gameLogic.score();
   }
 
   public gameProgress(): number {
-    // Calculate progress based on matched cards
-    let cards: Card[] = [];
-    this.cardList$.subscribe(cardList => (cards = cardList)).unsubscribe();
+    const cards = this.cards();
     if (cards.length === 0) return 0;
     const matchedCards = cards.filter(card => card.matched).length;
     return (matchedCards / cards.length) * 100;
@@ -171,15 +159,11 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   public isProcessing(): boolean {
-    let processing = false;
-    this.isProcessing$.subscribe(isProc => (processing = isProc)).unsubscribe();
-    return processing;
+    return this.gameLogic.isProcessing();
   }
 
   public cards(): Card[] {
-    let cardList: Card[] = [];
-    this.cardList$.subscribe(cards => (cardList = cards)).unsubscribe();
-    return cardList;
+    return this.gameLogic.cards();
   }
 
   public shouldAnimateCardIn(_index: number): boolean {
