@@ -9,10 +9,9 @@
 `npm audit` before this pass: **74 vulnerabilities** (3 critical, 48 high, 20 moderate, 3 low).
 After the lockfile refresh: **34** (1 critical, 24 high, 7 moderate, 2 low).
 After the Angular 19 → 21 upgrade: **7** (0 critical, 3 high, 4 moderate).
+After the application-builder migration: **0**.
 
-Nothing that ships in the production bundle is flagged any more. All seven remaining
-findings sit inside `@angular-devkit/build-angular`, the legacy webpack builder, and are
-dev-time only.
+`npm audit` is clean. GitHub started this at 115 open Dependabot alerts.
 
 ## What was done
 
@@ -27,6 +26,9 @@ dev-time only.
 4. **Upgraded Angular 19 → 21** (`ng update` through 20, then 21), plus `ngx-bootstrap`
    19 → 21, `ngx-toastr` 19 → 20, `@angular-eslint/*` 20 → 21, TypeScript 5.8 → 5.9.
    Angular 19 is out of LTS and several advisories have no v19 patch at all.
+5. **Migrated off the legacy webpack builder** to the esbuild-based `@angular/build:application`.
+   `@angular-devkit/build-angular` is gone from `devDependencies`, and with it the last seven
+   findings and 371 packages.
 
 ## Resolved
 
@@ -91,30 +93,53 @@ Migrations also converted `game.component.html` and `home.component.html` to blo
 flow (`@if` / `@for`), moved deprecated bootstrap options to `provideZoneChangeDetection()`,
 and switched `moduleResolution` to `bundler`.
 
-## Remaining — all dev-time
+## Build-system migration
 
-Seven findings, all reached through `@angular-devkit/build-angular@21.2.22` (the legacy
-webpack builder): `image-size` and `less` (high), `webpack-dev-server`, `sockjs`, `uuid`
-and `@angular-devkit/build-webpack` (moderate).
+`ng update @angular/cli --name use-application-builder` swapped every target over to
+`@angular/build` (`application`, `dev-server`, `extract-i18n`, `karma`) and dropped
+`@angular-devkit/build-angular` from `devDependencies`. That removed the last seven
+findings — `image-size`, `less`, `webpack-dev-server`, `sockjs`, `uuid` and
+`@angular-devkit/build-webpack` — along with the whole webpack toolchain: **1287 → 916
+installed packages**.
 
-None of them ship in the production bundle — they are build-server and asset-pipeline code.
-They disappear entirely by migrating to the modern esbuild-based builder:
+Four things needed hand-fixing after the schematic:
 
-```
-ng update @angular/cli --name use-application-builder
-```
+- **The output path is pinned flat.** The migration moves the browser build to
+  `dist/matching-game-angular/browser`. `Procfile` serves `dist/matching-game-angular`
+  and is consumed by a deploy that lives outside this repo, so `outputPath` is set to
+  `{ "base": "dist/matching-game-angular", "browser": "" }` to keep the old layout.
+  `start:prod`, `build:analyze`, `lighthouserc.cjs` and the CI Lighthouse step are
+  unchanged as a result.
+- **`@angular/build` was pinned back to `^21.2.22`.** The schematic runs through a
+  temporary *latest* CLI and wrote `^22.1.6`, one major ahead of the framework.
+- **The `test` target was left half-migrated.** `polyfills` has to be an array under the
+  new builder, and `src/test.ts` used `require.context`, which is webpack-only. The
+  esbuild karma builder discovers `*.spec.ts` through `tsconfig.spec.json` and sets up the
+  test environment itself, so `src/test.ts` is deleted and `polyfills` is now
+  `["src/polyfills.ts", "zone.js/testing"]`.
+- Stale `src/test.ts` entry dropped from `.prettierignore`.
 
-That changes the output layout (`dist/matching-game-angular/browser`), so the
-`start:prod` script, `lighthouserc.cjs` and the CI deploy jobs need their paths updated
-alongside. Left out of this change deliberately.
+`statsJson` is supported by the application builder, so `npm run build:analyze` still works.
+
+## Known gap, unrelated to this pass
+
+The CI `test` job uploads `./coverage/lcov.info` to Codecov, but `karma.conf.cjs` only
+configures the `html` and `text-summary` reporters and writes to
+`coverage/matching-game-angular/`. Codecov has never received data. The step has
+`fail_ci_if_error: false`, so it passes silently. Pre-existing; fixing it needs an
+`lcovonly` reporter and a path that matches.
 
 ## Verification
 
-Run on this branch, all green:
+Run on this branch, all green. The production build was also served with
+`serve -s dist/matching-game-angular` and smoke-tested: index, hashed bundles and the
+`/game` deep link all return 200.
 
 ```
 npm run lint          # 0 errors, 58 warnings (pre-existing no-magic-numbers / no-console)
 npm run format:check  # clean
-npm run test:ci       # 21/21 passing
-npm run build         # production bundle 767 kB raw / 162 kB transfer
+npm run test:ci       # 21/21 passing, coverage written
+npm run build         # production bundle 781 kB raw / 164 kB transfer
+npm run build:dev     # ok
+npm audit             # found 0 vulnerabilities
 ```
