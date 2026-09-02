@@ -8,22 +8,26 @@
       </div>
       <div class="status-text">
         <span class="status-title">{{ getStatusTitle() }}</span>
-        <span class="status-subtitle" *ngIf="getStatusSubtitle()">{{ getStatusSubtitle() }}</span>
+        @if (getStatusSubtitle()) {
+          <span class="status-subtitle">{{ getStatusSubtitle() }}</span>
+        }
       </div>
     </div>
 
     <!-- Game Stats Row -->
     <div class="stats-row">
       <!-- Timer -->
-      <div class="stat-card timer-card" *ngIf="gameTimer() > 0">
-        <div class="stat-icon">
-          <i class="fas fa-clock" [class.pulse]="isGameActive()"></i>
+      @if (gameTimer() > 0) {
+        <div class="stat-card timer-card">
+          <div class="stat-icon">
+            <i class="fas fa-clock" [class.pulse]="isGameActive()"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ formatTime(gameTimer()) }}</div>
+            <div class="stat-label">Time</div>
+          </div>
         </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ formatTime(gameTimer()) }}</div>
-          <div class="stat-label">Time</div>
-        </div>
-      </div>
+      }
 
       <!-- Current Attempts -->
       <div class="stat-card attempts-card">
@@ -97,100 +101,118 @@
   <div class="game-board" [class.disabled]="isProcessing()" [attr.aria-busy]="isProcessing()">
     <!-- Cards Grid -->
     <div class="cards-grid" [style.--cards-count]="cards().length">
-      <div
-        class="card-container"
-        *ngFor="let card of cards(); trackBy: trackByCardId; let i = index"
-        [style.animation-delay]="i * 50 + 'ms'"
-        [class.animate-in]="shouldAnimateCardIn(i)"
-      >
-        <div
-          class="card-flipper"
-          [class.flipped]="card.flipped"
-          [class.matched]="card.matched"
-          [class.processing]="isProcessing() && isCardBeingProcessed(card)"
-          [class.clickable]="canFlipCard() && card.isClickable()"
-          (click)="revealCard(card)"
-          (keydown.enter)="revealCard(card)"
-          (keydown.space)="revealCard(card); $event.preventDefault()"
-          role="button"
-          tabindex="0"
-          [attr.aria-pressed]="card.flipped"
-          [attr.aria-label]="getCardAriaLabel(card)"
-        >
-          <!-- Card Back (face up - shows image) -->
-          <div class="card card-back">
-            <div class="card-content">
-              <img
-                [src]="card.icon"
-                [alt]="card.name || 'card icon'"
-                class="card-image"
-                draggable="false"
-                loading="lazy"
-              />
-              <div class="card-name">{{ card.name }}</div>
+      @for (card of cards(); track trackByCardId(i, card); let i = $index) {
+        <div class="card-container" [style.animation-delay]="i * 50 + 'ms'" [class.animate-in]="shouldAnimateCardIn(i)">
+          <div
+            class="card-flipper"
+            [class.flipped]="card.flipped"
+            [class.matched]="card.matched"
+            [class.processing]="isProcessing() && isCardBeingProcessed(card)"
+            [class.clickable]="canFlipCard() && card.isClickable()"
+            (click)="revealCard(card)"
+            (keydown.enter)="revealCard(card)"
+            (keydown.space)="revealCard(card); $event.preventDefault()"
+            role="button"
+            tabindex="0"
+            [attr.aria-pressed]="card.flipped"
+            [attr.aria-label]="getCardAriaLabel(card)"
+          >
+            <!-- Card Back (face up - shows image) -->
+            <div class="card card-back">
+              <div class="card-content">
+                <img
+                  [src]="card.icon"
+                  [alt]="card.name || 'card icon'"
+                  class="card-image"
+                  draggable="false"
+                  loading="lazy"
+                />
+                <div class="card-name">{{ card.name }}</div>
+              </div>
+              <div class="card-shine"></div>
             </div>
-            <div class="card-shine"></div>
-          </div>
-
-          <!-- Card Front (face down) -->
-          <div class="card card-front" [style.background]="getCardFrontGradient(card)">
-            <div class="card-pattern">
-              <div class="pattern-circle" *ngFor="let circle of [1, 2, 3, 4, 5, 6]; trackBy: trackByIndex"></div>
+            <!-- Card Front (face down) -->
+            <div class="card card-front" [style.background]="getCardFrontGradient(card)">
+              <div class="card-pattern">
+                @for (circle of [1, 2, 3, 4, 5, 6]; track $index) {
+                  <div class="pattern-circle"></div>
+                }
+              </div>
+              <div class="card-logo">
+                <i class="fas fa-puzzle-piece"></i>
+              </div>
+              <div class="card-shine"></div>
             </div>
-            <div class="card-logo">
-              <i class="fas fa-puzzle-piece"></i>
-            </div>
-            <div class="card-shine"></div>
-          </div>
-
-          <!-- Match indicator -->
-          <div class="match-indicator" *ngIf="card.matched">
-            <i class="fas fa-check-circle"></i>
-          </div>
-
-          <!-- Processing indicator -->
-          <div class="processing-indicator" *ngIf="isProcessing() && isCardBeingProcessed(card)">
-            <div class="spinner"></div>
+            <!-- Match indicator -->
+            @if (card.matched) {
+              <div class="match-indicator">
+                <i class="fas fa-check-circle"></i>
+              </div>
+            }
+            <!-- Processing indicator -->
+            @if (isProcessing() && isCardBeingProcessed(card)) {
+              <div class="processing-indicator">
+                <div class="spinner"></div>
+              </div>
+            }
           </div>
         </div>
-      </div>
+      }
     </div>
 
     <!-- Game overlay for pause/processing states -->
-    <div class="game-overlay" *ngIf="isPaused() || isProcessing()" [class.paused]="isPaused()">
-      <div class="overlay-content">
-        <div class="overlay-icon" *ngIf="isPaused()">
-          <i class="fas fa-pause-circle"></i>
-        </div>
-        <div class="overlay-icon" *ngIf="isProcessing()">
-          <div class="loading-spinner"></div>
-        </div>
-        <div class="overlay-text">
-          <h3 *ngIf="isPaused()">Game Paused</h3>
-          <h3 *ngIf="isProcessing()">Processing...</h3>
-          <p *ngIf="isPaused()">Tap resume to continue</p>
+    @if (isPaused() || isProcessing()) {
+      <div class="game-overlay" [class.paused]="isPaused()">
+        <div class="overlay-content">
+          @if (isPaused()) {
+            <div class="overlay-icon">
+              <i class="fas fa-pause-circle"></i>
+            </div>
+          }
+          @if (isProcessing()) {
+            <div class="overlay-icon">
+              <div class="loading-spinner"></div>
+            </div>
+          }
+          <div class="overlay-text">
+            @if (isPaused()) {
+              <h3>Game Paused</h3>
+            }
+            @if (isProcessing()) {
+              <h3>Processing...</h3>
+            }
+            @if (isPaused()) {
+              <p>Tap resume to continue</p>
+            }
+          </div>
         </div>
       </div>
-    </div>
+    }
   </div>
 
   <!-- Game completion celebration -->
-  <div class="celebration-overlay" *ngIf="isGameWon()" [@celebrationAnimation]>
-    <div class="celebration-content">
-      <div class="celebration-icon">
-        <i class="fas fa-trophy"></i>
-      </div>
-      <h2>Congratulations! 🎉</h2>
-      <p>You completed the game in {{ currentAttempts() }} attempts!</p>
-      <div class="celebration-stats" *ngIf="isNewBestScore()">
-        <div class="new-record">
-          <i class="fas fa-medal"></i>
-          <span>New Best Score!</span>
+  @if (isGameWon()) {
+    <div class="celebration-overlay" [@celebrationAnimation]>
+      <div class="celebration-content">
+        <div class="celebration-icon">
+          <i class="fas fa-trophy"></i>
         </div>
+        <h2>Congratulations! 🎉</h2>
+        <p>You completed the game in {{ currentAttempts() }} attempts!</p>
+        @if (isNewBestScore()) {
+          <div class="celebration-stats">
+            <div class="new-record">
+              <i class="fas fa-medal"></i>
+              <span>New Best Score!</span>
+            </div>
+          </div>
+        }
       </div>
+      @for (confetti of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track $index) {
+        <div class="confetti"></div>
+      }
     </div>
-    <div class="confetti" *ngFor="let confetti of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; trackBy: trackByIndex"></div>
-  </div>
+  }
 </div>
 
 <!-- Restart Confirmation Modal -->
@@ -211,15 +233,17 @@
       Your current progress will be lost if you start a new game.
     </p>
 
-    <div class="current-progress" *ngIf="gameProgress() > 0">
-      <div class="progress-info">
-        <span class="progress-label">Current Progress:</span>
-        <span class="progress-value">{{ Math.round(gameProgress()) }}% complete</span>
+    @if (gameProgress() > 0) {
+      <div class="current-progress">
+        <div class="progress-info">
+          <span class="progress-label">Current Progress:</span>
+          <span class="progress-value">{{ Math.round(gameProgress()) }}% complete</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" [style.width.%]="gameProgress()"></div>
+        </div>
       </div>
-      <div class="progress-bar-container">
-        <div class="progress-bar" [style.width.%]="gameProgress()"></div>
-      </div>
-    </div>
+    }
   </div>
 
   <div class="modal-footer modern-modal-footer">

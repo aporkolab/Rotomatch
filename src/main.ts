@@ -1,4 +1,4 @@
-import { enableProdMode, importProvidersFrom } from '@angular/core';
+import { enableProdMode, provideZoneChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
 import { environment } from './environments/environment';
@@ -10,8 +10,6 @@ import { ContactComponent } from './app/page/contact/contact.component';
 import { GameComponent } from './app/page/game/game.component';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideToastr } from 'ngx-toastr';
-import { ModalModule } from 'ngx-bootstrap/modal';
-import { CollapseModule } from 'ngx-bootstrap/collapse';
 
 if (environment.production) {
   enableProdMode();
@@ -26,6 +24,7 @@ const routes: Routes = [
 
 bootstrapApplication(AppComponent, {
   providers: [
+    provideZoneChangeDetection(),
     provideRouter(routes),
     provideHttpClient(),
     provideAnimations(),
@@ -36,7 +35,6 @@ bootstrapApplication(AppComponent, {
       preventDuplicates: true,
       timeOut: 5000,
       extendedTimeOut: 3000
-    }),
-    importProvidersFrom(ModalModule.forRoot(), CollapseModule.forRoot())
+    })
   ]
 }).catch(err => console.error(err));
