@@ -1,3 +1,4 @@
+import type { MockedObject } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
@@ -9,7 +10,7 @@ import { Card } from '../model/card';
 describe('GameLogicService', () => {
   let service: GameLogicService;
   let httpMock: HttpTestingController;
-  let notificationService: jasmine.SpyObj<NotificationService>;
+  let notificationService: MockedObject<NotificationService>;
 
   const mockCards: Card[] = [
     new Card({ id: '1', name: 'A', icon: 'assets/images/cards/A.png', flipped: false, matched: false }),
@@ -19,14 +20,16 @@ describe('GameLogicService', () => {
   ];
 
   beforeEach(async () => {
-    const notificationSpy = jasmine.createSpyObj('NotificationService', [
-      'showError',
-      'showSuccess',
-      'showInfo',
-      'showLoading',
-      'clearAll'
-    ]);
-    const gameStateSpy = jasmine.createSpyObj('GameStateService', ['changeNewGameWanted']);
+    const notificationSpy = {
+      showError: vi.fn().mockName('NotificationService.showError'),
+      showSuccess: vi.fn().mockName('NotificationService.showSuccess'),
+      showInfo: vi.fn().mockName('NotificationService.showInfo'),
+      showLoading: vi.fn().mockName('NotificationService.showLoading'),
+      clearAll: vi.fn().mockName('NotificationService.clearAll')
+    };
+    const gameStateSpy = {
+      changeNewGameWanted: vi.fn().mockName('GameStateService.changeNewGameWanted')
+    };
 
     await TestBed.configureTestingModule({
       imports: [HttpClientTestingModule, RouterTestingModule],
@@ -39,7 +42,7 @@ describe('GameLogicService', () => {
 
     service = TestBed.inject(GameLogicService);
     httpMock = TestBed.inject(HttpTestingController);
-    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
+    notificationService = TestBed.inject(NotificationService) as MockedObject<NotificationService>;
 
     // Mock the initial card load that happens in constructor
     const req = httpMock.expectOne('assets/data/cards.json');
