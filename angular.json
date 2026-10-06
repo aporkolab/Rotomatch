@@ -71,6 +71,15 @@
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
+            },
+            "testing": {
+              "optimization": false,
+              "sourceMap": true,
+              "polyfills": [],
+              "styles": [
+                "src/styles.scss"
+              ],
+              "scripts": []
             }
           },
           "defaultConfiguration": "production"
@@ -94,24 +103,19 @@
           }
         },
         "test": {
-          "builder": "@angular/build:karma",
+          "builder": "@angular/build:unit-test",
           "options": {
-            "polyfills": [
-              "src/polyfills.ts",
-              "zone.js/testing"
-            ],
+            "buildTarget": "MatchingGameAngular:build:testing",
             "tsConfig": "tsconfig.spec.json",
-            "karmaConfig": "karma.conf.cjs",
-            "inlineStyleLanguage": "scss",
-            "assets": [
-              "src/favicon.ico",
-              "src/assets",
-              "src/robots.txt"
+            "runner": "vitest",
+            "browsers": [
+              "ChromiumHeadless"
             ],
-            "styles": [
-              "src/styles.scss"
-            ],
-            "scripts": []
+            "coverageReporters": [
+              "html",
+              "text-summary",
+              "lcov"
+            ]
           }
         }
       }

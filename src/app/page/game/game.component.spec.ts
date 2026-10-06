@@ -1,3 +1,4 @@
+import type { MockedObject } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
@@ -12,8 +13,8 @@ import { of, Subject } from 'rxjs';
 describe('GameComponent', () => {
   let component: GameComponent;
   let fixture: ComponentFixture<GameComponent>;
-  let gameLogicService: jasmine.SpyObj<GameLogicService>;
-  let modalService: jasmine.SpyObj<BsModalService>;
+  let gameLogicService: MockedObject<GameLogicService>;
+  let modalService: MockedObject<BsModalService>;
   let cardsSignal: ReturnType<typeof signal<Card[]>>;
   let scoreSignal: ReturnType<typeof signal<number>>;
   let isProcessingSignal: ReturnType<typeof signal<boolean>>;
@@ -23,7 +24,10 @@ describe('GameComponent', () => {
     scoreSignal = signal(0);
     isProcessingSignal = signal(false);
 
-    const gameLogicSpy = jasmine.createSpyObj('GameLogicService', ['newGame', 'revealCard', 'loadBestResults'], {
+    const gameLogicSpy = {
+      newGame: vi.fn().mockName('GameLogicService.newGame'),
+      revealCard: vi.fn().mockName('GameLogicService.revealCard'),
+      loadBestResults: vi.fn().mockName('GameLogicService.loadBestResults'),
       // The template reads these signals; they are what keeps an OnPush view in sync.
       cards: cardsSignal.asReadonly(),
       score: scoreSignal.asReadonly(),
@@ -32,14 +36,16 @@ describe('GameComponent', () => {
       score$: of(0),
       isProcessing$: of(false),
       gameWon$: new Subject<void>().asObservable()
-    });
+    };
 
-    const gameStateSpy = jasmine.createSpyObj('GameStateService', [], {
+    const gameStateSpy = {
       currentSelectedDeckSize: of(12), // Provide a default deck size
       currentNewGameWanted: of(false)
-    });
+    };
 
-    const modalSpy = jasmine.createSpyObj('BsModalService', ['show']);
+    const modalSpy = {
+      show: vi.fn().mockName('BsModalService.show')
+    };
 
     await TestBed.configureTestingModule({
       imports: [GameComponent, RouterTestingModule, BrowserAnimationsModule],
@@ -50,8 +56,8 @@ describe('GameComponent', () => {
       ]
     }).compileComponents();
 
-    gameLogicService = TestBed.inject(GameLogicService) as jasmine.SpyObj<GameLogicService>;
-    modalService = TestBed.inject(BsModalService) as jasmine.SpyObj<BsModalService>;
+    gameLogicService = TestBed.inject(GameLogicService) as MockedObject<GameLogicService>;
+    modalService = TestBed.inject(BsModalService) as MockedObject<BsModalService>;
   });
 
   beforeEach(() => {
@@ -117,7 +123,7 @@ describe('GameComponent', () => {
     component.deckSize = 12; // ensure deckSize is set
     component.restartGame();
     // It should have been called once on init, and once on restart
-    void expect(gameLogicService.newGame.calls.count()).toBe(2);
+    void expect(vi.mocked(gameLogicService.newGame).mock.calls.length).toBe(2);
     void expect(gameLogicService.newGame).toHaveBeenCalledWith(12);
   });
 });

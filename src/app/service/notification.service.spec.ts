@@ -23,21 +23,21 @@ describe('NotificationService', () => {
   // ngx-toastr then defaults it to '' and classList.add('') throws a
   // SyntaxError, which aborts whatever game action raised the notification.
   it('should not send positionClass when the caller does not supply one', () => {
-    const success = spyOn(toastr, 'success').and.callThrough();
+    const success = vi.spyOn(toastr, 'success');
 
     service.showSuccess('matched');
 
-    const options = success.calls.mostRecent().args[2];
+    const options = success.mock.lastCall?.[2];
     void expect(options).toBeDefined();
-    void expect('positionClass' in options!).toBeFalse();
+    void expect('positionClass' in options!).toBe(false);
   });
 
   it('should forward positionClass when the caller supplies one', () => {
-    const info = spyOn(toastr, 'info').and.callThrough();
+    const info = vi.spyOn(toastr, 'info');
 
     service.showInfo('hint', 'Info', { positionClass: 'toast-bottom-right' });
 
-    void expect(info.calls.mostRecent().args[2]?.positionClass).toBe('toast-bottom-right');
+    void expect(info.mock.lastCall?.[2]?.positionClass).toBe('toast-bottom-right');
   });
 
   it('should show a success toast without throwing', () => {

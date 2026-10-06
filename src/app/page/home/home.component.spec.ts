@@ -1,3 +1,4 @@
+import type { MockedObject } from 'vitest';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
@@ -12,24 +13,35 @@ import { HomeComponent } from './home.component';
 describe('HomeComponent', () => {
   let component: HomeComponent;
   let fixture: ComponentFixture<HomeComponent>;
-  let routerSpy: jasmine.SpyObj<Router>;
-  let notificationService: jasmine.SpyObj<NotificationService>;
+  let notificationService: MockedObject<NotificationService>;
 
   beforeEach(async () => {
-    const gameStateSpy = jasmine.createSpyObj('GameStateService', ['selectDeckSize']);
-    const notificationSpy = jasmine.createSpyObj('NotificationService', [
-      'showInfo',
-      'showWarning',
-      'showError',
-      'showSuccess'
-    ]);
-    const gameLogicSpy = jasmine.createSpyObj('GameLogicService', ['newGame', 'loadSavedGame']);
-    const achievementsSpy = jasmine.createSpyObj('AchievementsService', ['getDetailedStats', 'unlockedCount']);
-    achievementsSpy.getDetailedStats.and.returnValue({});
-    achievementsSpy.unlockedCount.and.returnValue(0);
-    const gameStateManagerSpy = jasmine.createSpyObj('GameStateManagerService', ['loadGameState']);
+    const gameStateSpy = {
+      selectDeckSize: vi.fn().mockName('GameStateService.selectDeckSize')
+    };
+    const notificationSpy = {
+      showInfo: vi.fn().mockName('NotificationService.showInfo'),
+      showWarning: vi.fn().mockName('NotificationService.showWarning'),
+      showError: vi.fn().mockName('NotificationService.showError'),
+      showSuccess: vi.fn().mockName('NotificationService.showSuccess')
+    };
+    const gameLogicSpy = {
+      newGame: vi.fn().mockName('GameLogicService.newGame'),
+      loadSavedGame: vi.fn().mockName('GameLogicService.loadSavedGame')
+    };
+    const achievementsSpy = {
+      getDetailedStats: vi.fn().mockName('AchievementsService.getDetailedStats'),
+      unlockedCount: vi.fn().mockName('AchievementsService.unlockedCount')
+    };
+    achievementsSpy.getDetailedStats.mockReturnValue({});
+    achievementsSpy.unlockedCount.mockReturnValue(0);
+    const gameStateManagerSpy = {
+      loadGameState: vi.fn().mockName('GameStateManagerService.loadGameState')
+    };
 
-    routerSpy = jasmine.createSpyObj('Router', ['navigate']);
+    const routerSpy = {
+      navigate: vi.fn().mockName('Router.navigate')
+    };
     const activatedRouteMock = {
       params: of({}),
       queryParams: of({}),
@@ -49,7 +61,7 @@ describe('HomeComponent', () => {
       ]
     }).compileComponents();
 
-    notificationService = TestBed.inject(NotificationService) as jasmine.SpyObj<NotificationService>;
+    notificationService = TestBed.inject(NotificationService) as MockedObject<NotificationService>;
   });
 
   beforeEach(() => {
@@ -68,7 +80,7 @@ describe('HomeComponent', () => {
 
     void expect(component.selectedDeckSize).toBe(value);
     void expect(notificationService.showInfo).toHaveBeenCalledWith(
-      jasmine.stringContaining(`${value} cards`),
+      expect.stringContaining(`${value} cards`),
       'Game Settings'
     );
   });

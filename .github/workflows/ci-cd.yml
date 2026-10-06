@@ -16,7 +16,7 @@ permissions:
   deployments: write
 
 env:
-  NODE_VERSION: '20.x'
+  NODE_VERSION: '24.19.0'
 
 jobs:
   lint-and-format:
@@ -33,7 +33,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm i
+        run: npm ci
 
       - name: Run ESLint
         run: npm run lint
@@ -57,7 +57,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm i
+        run: npm ci
+
+      - name: Install Chromium for browser tests
+        run: npm exec -- playwright install --with-deps chromium
 
       - name: Run unit tests
         run: npm run test:ci
@@ -67,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: coverage/matching-game-angular/
+          path: coverage/MatchingGameAngular/
           retention-days: 14
 
       # Codecov refuses tokenless uploads, so this only runs once CODECOV_TOKEN
@@ -77,8 +80,8 @@ jobs:
         if: env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v5
         with:
-          # karma writes here; the old ./coverage/lcov.info never existed.
-          files: ./coverage/matching-game-angular/lcov.info
+          # Vitest writes here; the old ./coverage/lcov.info never existed.
+          files: ./coverage/MatchingGameAngular/lcov.info
           token: ${{ env.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
@@ -96,7 +99,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm i
+        run: npm ci
 
       - name: Run security audit
         run: npm run audit:security
@@ -116,7 +119,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm i
+        run: npm ci
 
       - name: Build application
         run: npm run build
@@ -143,7 +146,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm i
+        run: npm ci
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -153,8 +156,7 @@ jobs:
 
       - name: Serve application
         run: |
-          npm install -g serve
-          serve -s dist/matching-game-angular -l 4200 &
+          npm exec -- serve -s dist/matching-game-angular -l 4200 &
           sleep 5
 
       - name: Run Lighthouse CI
