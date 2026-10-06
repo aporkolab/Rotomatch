@@ -2,7 +2,7 @@ module.exports = {
   ci: {
     collect: {
       url: ['http://localhost:4200/'],
-      startServerCommand: 'serve -s dist/matching-game-angular -l 4200',
+      startServerCommand: 'npm exec -- serve -s dist/matching-game-angular -l 4200',
       startServerReadyPattern: 'Accepting connections',
       numberOfRuns: 3,
       settings: {

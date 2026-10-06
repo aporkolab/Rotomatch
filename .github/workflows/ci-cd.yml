@@ -154,11 +154,6 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Serve application
-        run: |
-          npm exec -- serve -s dist/matching-game-angular -l 4200 &
-          sleep 5
-
       - name: Run Lighthouse CI
         run: |
           npm install -g @lhci/cli
