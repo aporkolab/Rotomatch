@@ -24,7 +24,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,html,scss,css,json}\"",
     "pre-commit": "lint-staged",
     "prepare": "husky install",
-    "audit:security": "npm audit --audit-level=moderate || echo 'Security audit completed with known development-only vulnerabilities'",
+    "audit:security": "npm audit --audit-level=moderate",
     "audit:fix": "npm audit fix",
     "clean": "rimraf dist node_modules/.cache",
     "deploy": "npm run build && npm run start:prod",
