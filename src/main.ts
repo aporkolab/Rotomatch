@@ -22,10 +22,5 @@ const routes: Routes = [
 ];
 
 bootstrapApplication(AppComponent, {
-  providers: [
-    provideZoneChangeDetection(),
-    provideRouter(routes),
-    provideHttpClient(),
-    provideAnimations(),
-  ]
+  providers: [provideZoneChangeDetection(), provideRouter(routes), provideHttpClient(), provideAnimations()]
 }).catch(err => console.error(err));

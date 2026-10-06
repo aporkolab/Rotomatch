@@ -29,7 +29,7 @@ describe('GameLogicService', () => {
     const gameStateSpy = jasmine.createSpyObj('GameStateService', ['changeNewGameWanted']);
 
     await TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule, RouterTestingModule,],
+      imports: [HttpClientTestingModule, RouterTestingModule],
       providers: [
         GameLogicService,
         { provide: NotificationService, useValue: notificationSpy },

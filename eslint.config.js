@@ -1,4 +1,3 @@
-import js from '@eslint/js';
 import angular from '@angular-eslint/eslint-plugin';
 import angularTemplate from '@angular-eslint/eslint-plugin-template';
 import typescript from '@typescript-eslint/eslint-plugin';
