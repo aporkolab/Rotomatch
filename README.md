@@ -5,7 +5,7 @@
 [![Performance](https://img.shields.io/badge/Lighthouse-90%2B-green)](https://rotomatch.aporkolab.com)
 [![License](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
-A sophisticated, enterprise-grade memory matching game built with Angular 19, featuring modern architecture, comprehensive testing, and advanced game mechanics.
+A sophisticated, enterprise-grade memory matching game built with Angular 22.2.1, featuring modern architecture, comprehensive testing, and advanced game mechanics.
 
 ## 🚀 What's New in v2.0.0
 
@@ -48,9 +48,9 @@ A sophisticated, enterprise-grade memory matching game built with Angular 19, fe
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 20.0.0 or higher (supports 20.x, 22.x, and newer versions)
+- Node.js `^22.22.3 || ^24.15.0 || >=26.0.0` (22.22.3+ on 22.x, 24.15.0+ on 24.x, or 26.0.0+), as specified in [package.json](package.json)
 - npm 10.0.0 or higher (supports 10.x, 11.x, and newer versions)
-- Modern web browser with ES2020 support
+- A modern browser covered by the project's [Browserslist configuration](.browserslistrc)
 
 ### Installation
 
@@ -78,8 +78,9 @@ npm run build:dev     # Development build
 npm run watch         # Watch mode
 
 # Testing & Quality
-npm test              # Run unit tests
-npm run test:ci       # CI tests with coverage
+npm test              # Vitest unit/component tests in headless Chromium (see Testing below)
+npm run test:ci       # Single test run with V8 coverage
+npm run test:coverage # Tests with V8 coverage in watch mode
 npm run lint          # Lint code
 npm run lint:fix      # Fix linting issues
 npm run format        # Format code
@@ -192,6 +193,29 @@ npm start
 - **Angular Style Guide**: Following official conventions
 - **SOLID Principles**: Clean architecture patterns
 - **Reactive Programming**: RxJS and Angular signals
+
+## Testing
+
+Unit and component tests use Angular's `@angular/build:unit-test` builder with Vitest 5 and the Playwright browser provider. [angular.json](angular.json) configures `ChromiumHeadless`; coverage uses `@vitest/coverage-v8`.
+
+After `npm ci`, install the Chromium binary required by Playwright:
+
+```bash
+npm exec -- playwright install chromium
+
+# On Linux/CI, also install the required system libraries:
+npm exec -- playwright install --with-deps chromium
+```
+
+```bash
+npm test              # Watch mode
+npm run test:coverage # Watch mode with coverage
+npm run test:ci       # Single run with coverage (ng test --watch=false --coverage)
+```
+
+HTML and LCOV coverage reports are written to `coverage/MatchingGameAngular/`; a text summary is printed in the terminal. The [CI workflow](.github/workflows/ci-cd.yml) installs Chromium, runs `npm run test:ci`, and uploads this directory as the `coverage` artifact. Codecov uploads use `coverage/MatchingGameAngular/lcov.info` when `CODECOV_TOKEN` is configured.
+
+The `e2e` script remains in `package.json`, but `angular.json` has no E2E target configured. The Playwright provider above runs the unit and component tests.
 
 ## 1. Original Task Description
 
