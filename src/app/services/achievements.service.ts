@@ -1,8 +1,10 @@
 import { Injectable, signal, computed } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { GameDifficulty, IGameStats } from '../types/game.types';
 import { NotificationService } from '../service/notification.service';
 import { ErrorHandlerService } from './error-handler.service';
 import { ConfigService } from './config.service';
+import { GameStateManagerService } from './game-state-manager.service';
 
 export interface Achievement {
   id: string;
@@ -221,9 +223,12 @@ export class AchievementsService {
   public constructor(
     private readonly notificationService: NotificationService,
     private readonly errorHandler: ErrorHandlerService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    gameStateManager: GameStateManagerService
   ) {
     this.loadStats();
+    // Record every finished game; nothing else feeds the statistics.
+    gameStateManager.gameWon$.pipe(takeUntilDestroyed()).subscribe(stats => this.updateGameStats(stats));
   }
 
   /**
