@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, OnDestroy, Signal, computed } from '@angular/core';
+import { Injectable, OnDestroy, Signal, computed, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { map, tap, catchError } from 'rxjs/operators';
@@ -18,13 +18,13 @@ export class GameLogicService implements OnDestroy {
   private isCardsLoaded = false;
   private loadingPromise: Promise<Card[]> | null = null;
 
-  public constructor(
-    private readonly http: HttpClient,
-    private readonly notificationService: NotificationService,
-    private readonly configService: ConfigService,
-    private readonly errorHandler: ErrorHandlerService,
-    private readonly gameStateManager: GameStateManagerService
-  ) {
+  private readonly http = inject(HttpClient);
+  private readonly notificationService = inject(NotificationService);
+  private readonly configService = inject(ConfigService);
+  private readonly errorHandler = inject(ErrorHandlerService);
+  private readonly gameStateManager = inject(GameStateManagerService);
+
+  public constructor() {
     this.preloadCards();
   }
 

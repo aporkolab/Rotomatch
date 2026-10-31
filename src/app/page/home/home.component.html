@@ -79,7 +79,7 @@
       </h3>
 
       <div class="deck-size-grid">
-        @for (size of deckSizes; track trackByDeckSize($index, size)) {
+        @for (size of deckSizes; track size) {
           <div
             class="deck-size-card"
             [class.selected]="selectedDeckSize === size"
@@ -88,7 +88,7 @@
           >
             <div class="deck-size-number">{{ size }}</div>
             <div class="deck-size-label">{{ size / 2 }} pairs</div>
-            <div class="difficulty-indicator" [ngClass]="getDifficultyClass(size)"></div>
+            <div [class]="'difficulty-indicator ' + getDifficultyClass(size)"></div>
             @if (size === 12) {
               <span class="recommended-badge">Recommended</span>
             }

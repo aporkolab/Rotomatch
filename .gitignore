@@ -53,3 +53,6 @@ Thumbs.db
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+# Vitest browser-mode failure screenshots
+.vitest/

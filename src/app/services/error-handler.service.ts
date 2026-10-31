@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, of, retry, throwError, timer } from 'rxjs';
 import { IGameError } from '../types/game.types';
 import { NotificationService } from '../service/notification.service';
@@ -20,10 +20,8 @@ export class ErrorHandlerService {
   private errorLog: IGameError[] = [];
   private readonly maxLogEntries = 100;
 
-  public constructor(
-    private readonly notificationService: NotificationService,
-    private readonly configService: ConfigService
-  ) {}
+  private readonly notificationService = inject(NotificationService);
+  private readonly configService = inject(ConfigService);
 
   /**
    * Creates a standardized error object

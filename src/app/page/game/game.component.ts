@@ -27,7 +27,6 @@ const CARD_FRONT_GRADIENT = 'linear-gradient(135deg, hsl(220, 20%, 25%), hsl(220
   selector: 'app-game',
   templateUrl: './game.component.html',
   styleUrls: ['./game.component.scss'],
-  standalone: true,
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [

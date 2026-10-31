@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, signal, inject } from '@angular/core';
 import { Subject, interval, takeUntil } from 'rxjs';
 import {
   IGameSession,
@@ -80,10 +80,10 @@ export class GameStateManagerService {
   // them and must not fire into a game started (or reset) in the meantime.
   private readonly pendingTimeouts = new Set<ReturnType<typeof setTimeout>>();
 
-  public constructor(
-    private readonly configService: ConfigService,
-    private readonly errorHandler: ErrorHandlerService
-  ) {
+  private readonly configService = inject(ConfigService);
+  private readonly errorHandler = inject(ErrorHandlerService);
+
+  public constructor() {
     this.initializeDefaultState();
   }
 
