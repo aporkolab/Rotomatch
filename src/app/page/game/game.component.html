@@ -2,15 +2,13 @@
 <div class="game-header">
   <div class="header-content">
     <!-- Game Status Banner -->
-    <div class="game-status-banner" [ngClass]="getGameStatusClass()">
+    <div class="game-status-banner game-active">
       <div class="status-icon">
-        <i [class]="getStatusIcon()"></i>
+        <i class="fas fa-gamepad"></i>
       </div>
       <div class="status-text">
-        <span class="status-title">{{ getStatusTitle() }}</span>
-        @if (getStatusSubtitle()) {
-          <span class="status-subtitle">{{ getStatusSubtitle() }}</span>
-        }
+        <span class="status-title">Memory Game</span>
+        <span class="status-subtitle">Match all cards to win!</span>
       </div>
     </div>
 
@@ -101,8 +99,8 @@
   <div class="game-board" [class.disabled]="isProcessing()" [attr.aria-busy]="isProcessing()">
     <!-- Cards Grid -->
     <div class="cards-grid" [style.--cards-count]="cards().length">
-      @for (card of cards(); track trackByCardId(i, card); let i = $index) {
-        <div class="card-container" [style.animation-delay]="i * 50 + 'ms'" [class.animate-in]="shouldAnimateCardIn(i)">
+      @for (card of cards(); track card.id; let i = $index) {
+        <div [style.animation-delay]="i * 50 + 'ms'" class="card-container animate-in">
           <div
             class="card-flipper"
             [class.flipped]="card.flipped"
@@ -115,7 +113,7 @@
             role="button"
             tabindex="0"
             [attr.aria-pressed]="card.flipped"
-            [attr.aria-label]="getCardAriaLabel(card)"
+            [attr.aria-label]="getCardAriaLabel(card, i)"
           >
             <!-- Card Back (face up - shows image) -->
             <div class="card card-back">
@@ -132,7 +130,7 @@
               <div class="card-shine"></div>
             </div>
             <!-- Card Front (face down) -->
-            <div class="card card-front" [style.background]="getCardFrontGradient(card)">
+            <div class="card card-front" [style.background]="cardFrontGradient">
               <div class="card-pattern">
                 @for (circle of [1, 2, 3, 4, 5, 6]; track $index) {
                   <div class="pattern-circle"></div>

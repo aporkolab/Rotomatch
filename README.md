@@ -5,7 +5,7 @@
 [![Performance](https://img.shields.io/badge/Lighthouse-90%2B-green)](https://rotomatch.aporkolab.com)
 [![License](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
-A sophisticated, enterprise-grade memory matching game built with Angular 22.2.1, featuring modern architecture, comprehensive testing, and advanced game mechanics.
+A sophisticated, enterprise-grade memory matching game built with Angular 22.2 (TypeScript 6.0, Vitest 5), featuring modern architecture, comprehensive testing, and advanced game mechanics.
 
 ## 🚀 What's New in v2.0.0
 
@@ -13,7 +13,6 @@ A sophisticated, enterprise-grade memory matching game built with Angular 22.2.1
 - **Modern TypeScript**: Strict typing, no `any` types, comprehensive interfaces
 - **Angular Signals**: Reactive state management with computed values
 - **Error Handling**: Comprehensive error boundaries with retry logic
-- **Performance Monitoring**: Real-time FPS tracking and optimization suggestions
 - **Advanced State Management**: Persistent game state with auto-save
 - **Achievement System**: Unlock achievements and track detailed statistics
 
@@ -50,6 +49,7 @@ A sophisticated, enterprise-grade memory matching game built with Angular 22.2.1
 ### Prerequisites
 - Node.js `^22.22.3 || ^24.15.0 || >=26.0.0` (22.22.3+ on 22.x, 24.15.0+ on 24.x, or 26.0.0+), as specified in [package.json](package.json)
 - npm 10.0.0 or higher (supports 10.x, 11.x, and newer versions)
+- CI runs on Node.js 26 LTS (see `NODE_VERSION` in [the workflow](.github/workflows/ci-cd.yml))
 - A modern browser covered by the project's [Browserslist configuration](.browserslistrc)
 
 ### Installation
@@ -76,6 +76,8 @@ npm start              # Start dev server
 npm run build         # Production build
 npm run build:dev     # Development build
 npm run watch         # Watch mode
+npm run start:prod    # Serve the production build (sirv, SPA fallback, honours PORT)
+npm run clean         # Remove dist/ and node_modules/.cache
 
 # Testing & Quality
 npm test              # Vitest unit/component tests in headless Chromium (see Testing below)
@@ -96,9 +98,10 @@ npm run audit:security # Security audit
 - **Card Matching**: Classic memory game with flip animations
 - **Deck Sizes**: Configurable from 4 to 20 cards (2-10 pairs)
 - **Difficulty Levels**: 
-  - **Easy**: 2.5s card reveal time, no limits
-  - **Medium**: 1.5s reveal time, 5-minute time limit
-  - **Hard**: 0.8s reveal time, attempt limits, 3-minute time limit
+  - **Easy**: 2.5s card reveal time
+  - **Medium**: 1.5s reveal time
+  - **Hard**: 0.8s reveal time
+  - `ConfigService` also defines a 5-minute (Medium) and 3-minute plus attempt limit (Hard), but the game does not enforce them yet.
 
 ### 🏆 Achievement System
 - **12+ Unique Achievements** across 6 categories:
@@ -149,12 +152,6 @@ src/
 - **Achievement Tracking**: Automatic unlock detection
 - **Statistics Engine**: Comprehensive game analytics
 - **Progress Calculation**: Real-time achievement progress
-
-#### ⚡ PerformanceService
-- **FPS Monitoring**: Real-time frame rate tracking
-- **Performance Metrics**: Load times, memory usage
-- **Optimization Suggestions**: Automatic performance hints
-- **Device Capabilities**: Hardware detection
 
 #### 🛡️ ErrorHandlerService
 - **Global Error Handling**: Catch and process all errors
@@ -213,7 +210,15 @@ npm run test:coverage # Watch mode with coverage
 npm run test:ci       # Single run with coverage (ng test --watch=false --coverage)
 ```
 
+Vitest browser mode stores screenshots of failing tests in `.vitest/`, which is git-ignored.
+
 HTML and LCOV coverage reports are written to `coverage/MatchingGameAngular/`; a text summary is printed in the terminal. The [CI workflow](.github/workflows/ci-cd.yml) installs Chromium, runs `npm run test:ci`, and uploads this directory as the `coverage` artifact. Codecov uploads use `coverage/MatchingGameAngular/lcov.info` when `CODECOV_TOKEN` is configured.
+
+## Deployment
+
+`npm run build` writes the app to `dist/matching-game-angular/`. `npm run start:prod` serves that folder with [sirv](https://github.com/lukeed/sirv) in single-page mode, so deep links such as `/game` fall back to `index.html`. The [Procfile](Procfile) runs the same script; the port comes from the `PORT` environment variable (default 8080). No other environment variables are needed at runtime.
+
+The CI workflow runs on every branch push and on pull requests to `main`: lint and Prettier check, unit tests with coverage, `npm audit --audit-level=moderate`, the production build and a Lighthouse audit against the built app. Optional repository secrets: `CODECOV_TOKEN` (coverage upload) and `LHCI_GITHUB_APP_TOKEN` (Lighthouse status checks). Pushing a `v*` tag that matches `package.json` publishes a GitHub release with the zipped bundle.
 
 The `e2e` script remains in `package.json`, but `angular.json` has no E2E target configured. The Playwright provider above runs the unit and component tests.
 

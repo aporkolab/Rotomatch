@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { ToastService, ToastOptions } from '../service/toast.service';
 
 interface NotificationConfig {
@@ -19,7 +19,7 @@ export class NotificationService {
     progressBar: true
   };
 
-  public constructor(private readonly toastr: ToastService) {}
+  private readonly toastr = inject(ToastService);
 
   public showSuccess(message: string, title: string = 'Success', config?: NotificationConfig): void {
     const options = this.buildConfig(config);

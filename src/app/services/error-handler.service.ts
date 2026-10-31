@@ -1,7 +1,5 @@
-import { Injectable } from '@angular/core';
-import { Observable, throwError, of } from 'rxjs';
-import { retryWhen, mergeMap } from 'rxjs/operators';
-import { timer } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Observable, catchError, of, retry, throwError, timer } from 'rxjs';
 import { IGameError } from '../types/game.types';
 import { NotificationService } from '../service/notification.service';
 import { ConfigService } from './config.service';
@@ -22,10 +20,8 @@ export class ErrorHandlerService {
   private errorLog: IGameError[] = [];
   private readonly maxLogEntries = 100;
 
-  public constructor(
-    private readonly notificationService: NotificationService,
-    private readonly configService: ConfigService
-  ) {}
+  private readonly notificationService = inject(NotificationService);
+  private readonly configService = inject(ConfigService);
 
   /**
    * Creates a standardized error object
@@ -49,31 +45,21 @@ export class ErrorHandlerService {
     const retryAttempts = this.configService.getApiConfig().retryAttempts;
 
     return source.pipe(
-      retryWhen(errors =>
-        errors.pipe(
-          mergeMap((error, index) => {
-            const retryCount = index + 1;
+      // Exponential backoff: 1s, 2s, 4s, ...
+      retry({ count: retryAttempts, delay: (_error, retryCount) => timer(Math.pow(2, retryCount - 1) * 1000) }),
+      catchError((error: unknown) => {
+        const gameError = this.createError(
+          ErrorCode.NETWORK_ERROR,
+          `Failed after ${retryAttempts} retry attempts`,
+          error instanceof Error ? error.message : (error as Partial<IGameError> | null)?.message
+        );
 
-            if (retryCount > retryAttempts) {
-              const gameError = this.createError(
-                ErrorCode.NETWORK_ERROR,
-                `Failed after ${retryAttempts} retry attempts`,
-                error.message
-              );
+        if (showNotification) {
+          this.showErrorNotification(gameError);
+        }
 
-              if (showNotification) {
-                this.showErrorNotification(gameError);
-              }
-
-              return fallback !== undefined ? of(fallback) : throwError(() => gameError);
-            }
-
-            // Exponential backoff
-            const delay = Math.pow(2, retryCount - 1) * 1000;
-            return timer(delay);
-          })
-        )
-      )
+        return fallback !== undefined ? of(fallback) : throwError(() => gameError);
+      })
     );
   }
 

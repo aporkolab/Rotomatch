@@ -1,7 +1,5 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { CommonModule } from '@angular/common';
-import { Subscription } from 'rxjs';
 import { GameLogicService } from '../../service/game-logic.service';
 import { AchievementsService } from '../../services/achievements.service';
 import { GameStateManagerService } from '../../services/game-state-manager.service';
@@ -12,11 +10,10 @@ import { NotificationService } from '../../service/notification.service';
   selector: 'app-home',
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
-  standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class HomeComponent implements OnInit, OnDestroy {
+export class HomeComponent implements OnInit {
   // Game configuration
   public readonly deckSizes = DECK_SIZE_OPTIONS;
   public readonly GameDifficulty = GameDifficulty; // Make enum available in template
@@ -30,24 +27,16 @@ export class HomeComponent implements OnInit, OnDestroy {
   public achievementCount = 0;
   public winRate = 0;
 
-  private readonly subscriptions = new Subscription();
-
-  public constructor(
-    private readonly router: Router,
-    private readonly gameLogic: GameLogicService,
-    private readonly achievementsService: AchievementsService,
-    private readonly gameStateManager: GameStateManagerService,
-    private readonly notificationService: NotificationService
-  ) {}
+  private readonly router = inject(Router);
+  private readonly gameLogic = inject(GameLogicService);
+  private readonly achievementsService = inject(AchievementsService);
+  private readonly gameStateManager = inject(GameStateManagerService);
+  private readonly notificationService = inject(NotificationService);
 
   public ngOnInit(): void {
     this.loadUserStatistics();
     this.checkForSavedGame();
     this.setDefaultSelections();
-  }
-
-  public ngOnDestroy(): void {
-    this.subscriptions.unsubscribe();
   }
 
   /**
@@ -125,12 +114,8 @@ export class HomeComponent implements OnInit, OnDestroy {
    * Checks if there's a saved game
    */
   private checkForSavedGame(): void {
-    // This would check if there's a saved game state
-    this.hasSavedGame = this.gameLogic.loadSavedGame();
-    // Reset the state since we're just checking
-    if (this.hasSavedGame) {
-      // Load saved game to restore state, but don't start the game
-    }
+    // Only peek at storage: loading here would restore the game and start its timer.
+    this.hasSavedGame = this.gameStateManager.hasSavedGame();
   }
 
   /**
@@ -145,12 +130,5 @@ export class HomeComponent implements OnInit, OnDestroy {
       // Keep last selections or set based on user's skill level
       this.selectedDifficulty = GameDifficulty.MEDIUM;
     }
-  }
-
-  /**
-   * TrackBy function for deck sizes
-   */
-  public trackByDeckSize(index: number, size: number): number {
-    return size;
   }
 }

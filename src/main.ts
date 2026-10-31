@@ -1,4 +1,4 @@
-import { enableProdMode, provideZoneChangeDetection } from '@angular/core';
+import { enableProdMode, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { AppComponent } from './app/app.component';
 import { environment } from './environments/environment';
@@ -9,6 +9,7 @@ import { RulesComponent } from './app/page/rules/rules.component';
 import { ContactComponent } from './app/page/contact/contact.component';
 import { GameComponent } from './app/page/game/game.component';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { AchievementsService } from './app/services/achievements.service';
 
 if (environment.production) {
   enableProdMode();
@@ -22,5 +23,15 @@ const routes: Routes = [
 ];
 
 bootstrapApplication(AppComponent, {
-  providers: [provideZoneChangeDetection(), provideRouter(routes), provideHttpClient(), provideAnimations()]
+  providers: [
+    provideZoneChangeDetection(),
+    provideRouter(routes),
+    provideHttpClient(),
+    provideAnimations(),
+    // Create the achievements tracker up front so wins count even when the
+    // player lands on /game without visiting the home page first.
+    provideAppInitializer(() => {
+      inject(AchievementsService);
+    })
+  ]
 }).catch(err => console.error(err));

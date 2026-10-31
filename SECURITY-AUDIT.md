@@ -135,3 +135,23 @@ npm run build         # production bundle 781 kB raw / 164 kB transfer
 npm run build:dev     # ok
 npm audit             # found 0 vulnerabilities
 ```
+
+## Addendum (2026-10-31): audit fixes after the Angular 22.2 patch releases
+
+The Security Audit job went red on Dependabot PR #21: `vite` 8.3.0–8.3.2 (pulled in by
+`@angular/build` 22.2.1) carried high-severity `launch-editor` advisories, and new
+moderate advisories had appeared for `minimatch` < 11.0.1, `glob` < 14.0.2 and `zod`.
+
+- Angular 22.2.4 / CLI and build 22.2.5 bring `vite` 8.3.5 and
+  `@modelcontextprotocol/server` 2.3.1 (the Dependabot bump).
+- `serve` is replaced by `sirv-cli`: `serve-handler` pins `minimatch` 3.1.5, for which no
+  patched 3.x exists. `start:prod`, `Procfile` and `lighthouserc.cjs` now run
+  `sirv dist/matching-game-angular --single`; the output layout is unchanged and `PORT` is
+  honoured. The external deploy that consumes `Procfile` should be smoke-tested once.
+- `minimatch` ^10 (ESLint, typescript-eslint) is overridden to ^11.0.3; the API used by
+  those packages is unchanged and lint output is identical.
+- `rimraf` (and with it the vulnerable `glob`) is dropped; `npm run clean` uses
+  `fs.rmSync`.
+
+Result: `npm audit` reports 0 vulnerabilities. TypeScript stays on 6.0 because
+`@angular/compiler-cli` 22 requires `>=6.0 <6.1`.

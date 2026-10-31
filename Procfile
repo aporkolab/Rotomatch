@@ -1,1 +1,1 @@
-web: npx serve -s dist/matching-game-angular
+web: npm run start:prod

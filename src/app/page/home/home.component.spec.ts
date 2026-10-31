@@ -3,12 +3,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of } from 'rxjs';
-import { GameStateService } from 'src/app/service/game-state.service';
 import { NotificationService } from 'src/app/service/notification.service';
 import { GameLogicService } from 'src/app/service/game-logic.service';
 import { AchievementsService } from 'src/app/services/achievements.service';
 import { GameStateManagerService } from 'src/app/services/game-state-manager.service';
 import { HomeComponent } from './home.component';
+import { GameDifficulty } from 'src/app/types/game.types';
 
 describe('HomeComponent', () => {
   let component: HomeComponent;
@@ -16,9 +16,6 @@ describe('HomeComponent', () => {
   let notificationService: MockedObject<NotificationService>;
 
   beforeEach(async () => {
-    const gameStateSpy = {
-      selectDeckSize: vi.fn().mockName('GameStateService.selectDeckSize')
-    };
     const notificationSpy = {
       showInfo: vi.fn().mockName('NotificationService.showInfo'),
       showWarning: vi.fn().mockName('NotificationService.showWarning'),
@@ -36,7 +33,8 @@ describe('HomeComponent', () => {
     achievementsSpy.getDetailedStats.mockReturnValue({});
     achievementsSpy.unlockedCount.mockReturnValue(0);
     const gameStateManagerSpy = {
-      loadGameState: vi.fn().mockName('GameStateManagerService.loadGameState')
+      loadGameState: vi.fn().mockName('GameStateManagerService.loadGameState'),
+      hasSavedGame: vi.fn().mockName('GameStateManagerService.hasSavedGame')
     };
 
     const routerSpy = {
@@ -51,7 +49,6 @@ describe('HomeComponent', () => {
     await TestBed.configureTestingModule({
       imports: [HomeComponent, HttpClientTestingModule],
       providers: [
-        { provide: GameStateService, useValue: gameStateSpy },
         { provide: Router, useValue: routerSpy },
         { provide: ActivatedRoute, useValue: activatedRouteMock },
         { provide: NotificationService, useValue: notificationSpy },
@@ -83,5 +80,35 @@ describe('HomeComponent', () => {
       expect.stringContaining(`${value} cards`),
       'Game Settings'
     );
+  });
+
+  it('should start a game with the chosen settings and go to the board', async () => {
+    const gameLogic = TestBed.inject(GameLogicService) as MockedObject<GameLogicService>;
+    const router = TestBed.inject(Router) as MockedObject<Router>;
+    component.selectDeckSize(8);
+    component.selectDifficulty(GameDifficulty.HARD);
+
+    await component.startGame();
+
+    void expect(gameLogic.newGame).toHaveBeenCalledWith(8, GameDifficulty.HARD);
+    void expect(router.navigate).toHaveBeenCalledWith(['/game']);
+  });
+
+  it('should warn instead of starting without a difficulty', async () => {
+    const gameLogic = TestBed.inject(GameLogicService) as MockedObject<GameLogicService>;
+    component.selectedDifficulty = null;
+
+    await component.startGame();
+
+    void expect(gameLogic.newGame).not.toHaveBeenCalled();
+    void expect(notificationService.showWarning).toHaveBeenCalled();
+  });
+
+  it('should only peek for a saved game on load, never restore it', () => {
+    const gameLogic = TestBed.inject(GameLogicService) as MockedObject<GameLogicService>;
+    const manager = TestBed.inject(GameStateManagerService) as MockedObject<GameStateManagerService>;
+
+    void expect(manager.hasSavedGame).toHaveBeenCalled();
+    void expect(gameLogic.loadSavedGame).not.toHaveBeenCalled();
   });
 });

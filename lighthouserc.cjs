@@ -2,8 +2,8 @@ module.exports = {
   ci: {
     collect: {
       url: ['http://localhost:4200/'],
-      startServerCommand: 'npm exec -- serve -s dist/matching-game-angular -l 4200',
-      startServerReadyPattern: 'Accepting connections',
+      startServerCommand: 'npm exec -- sirv dist/matching-game-angular --single --port 4200',
+      startServerReadyPattern: 'Your application is ready',
       numberOfRuns: 3,
       settings: {
         preset: 'desktop',

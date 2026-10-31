@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, signal, inject } from '@angular/core';
 import { Subject, interval, takeUntil } from 'rxjs';
 import {
   IGameSession,
@@ -76,10 +76,14 @@ export class GameStateManagerService {
   // Timer management
   private readonly timerDestroy$ = new Subject<void>();
 
-  public constructor(
-    private readonly configService: ConfigService,
-    private readonly errorHandler: ErrorHandlerService
-  ) {
+  // Pending match/mismatch resolutions. They belong to the game that scheduled
+  // them and must not fire into a game started (or reset) in the meantime.
+  private readonly pendingTimeouts = new Set<ReturnType<typeof setTimeout>>();
+
+  private readonly configService = inject(ConfigService);
+  private readonly errorHandler = inject(ErrorHandlerService);
+
+  public constructor() {
     this.initializeDefaultState();
   }
 
@@ -123,6 +127,7 @@ export class GameStateManagerService {
         updatedAt: new Date()
       };
 
+      this.cancelPendingTimeouts();
       this._currentSession.set(session);
       this._gameState.set(GameState.IDLE);
       this._gameTimer.set(0);
@@ -231,7 +236,7 @@ export class GameStateManagerService {
       attempts: session.stats.attempts + 1
     };
 
-    setTimeout(() => {
+    this.schedule(() => {
       if (card1.matches(card2)) {
         this.handleMatch(card1, card2, updatedStats);
       } else {
@@ -279,7 +284,7 @@ export class GameStateManagerService {
   private handleMismatch(card1: Card, card2: Card, stats: IGameStats): void {
     const difficultySettings = this.configService.getDifficultySettings(stats.difficulty);
 
-    setTimeout(() => {
+    this.schedule(() => {
       const cards = this._cards();
       const updatedCards = cards.map(card => {
         if (card.id === card1.id || card.id === card2.id) {
@@ -311,10 +316,11 @@ export class GameStateManagerService {
 
     this.updateSessionStats(finalStats);
     this._gameState.set(GameState.WON);
-    this._gameWon$.next(finalStats);
 
-    // Update best scores
+    // Persist the best score before announcing the win, so listeners that
+    // reload best scores on gameWon$ see this game's result.
     this.updateBestScores(finalStats);
+    this._gameWon$.next(finalStats);
 
     // Clear saved game state
     this.clearSavedGameState();
@@ -343,6 +349,7 @@ export class GameStateManagerService {
    */
   public resetGame(): void {
     this.stopTimer();
+    this.cancelPendingTimeouts();
     this._gameState.set(GameState.IDLE);
     this._cards.set([]);
     this._flippedCards.set([]);
@@ -380,6 +387,19 @@ export class GameStateManagerService {
 
   private stopTimer(): void {
     this.timerDestroy$.next();
+  }
+
+  private schedule(callback: () => void, delay: number): void {
+    const handle = setTimeout(() => {
+      this.pendingTimeouts.delete(handle);
+      callback();
+    }, delay);
+    this.pendingTimeouts.add(handle);
+  }
+
+  private cancelPendingTimeouts(): void {
+    this.pendingTimeouts.forEach(handle => clearTimeout(handle));
+    this.pendingTimeouts.clear();
   }
 
   /**
@@ -457,17 +477,30 @@ export class GameStateManagerService {
         const parsed = JSON.parse(savedState);
         const session = parsed.session as IGameSession;
 
-        // Convert plain objects back to Card instances
-        const cards = session.cards.map(cardData => new Card(cardData));
-        const flippedCards = session.flippedCards.map(cardData => new Card(cardData));
+        // A pair that was still being compared when the state was saved can
+        // never be resolved after a reload, so turn unmatched cards face down.
+        const cards = session.cards.map(cardData => {
+          const card = new Card(cardData);
+          return card.matched ? card : card.reset();
+        });
 
+        this.cancelPendingTimeouts();
         this._currentSession.set({
           ...session,
           cards,
-          flippedCards
+          flippedCards: [],
+          // JSON turns Dates into strings; the win handler needs real Dates.
+          stats: {
+            ...session.stats,
+            startTime: new Date(session.stats.startTime),
+            endTime: session.stats.endTime != null ? new Date(session.stats.endTime) : undefined
+          },
+          createdAt: new Date(session.createdAt),
+          updatedAt: new Date(session.updatedAt)
         });
         this._cards.set(cards);
-        this._flippedCards.set(flippedCards);
+        this._flippedCards.set([]);
+        this._isProcessing.set(false);
         this._gameState.set(session.state);
         this._gameTimer.set(parsed.gameTimer ?? 0);
         this._isPaused.set(parsed.isPaused ?? false);
@@ -486,6 +519,19 @@ export class GameStateManagerService {
       }
     }
     return false;
+  }
+
+  /**
+   * Reports whether a resumable game is stored, without loading it.
+   */
+  public hasSavedGame(): boolean {
+    const storageKey = this.configService.getStorageConfig().gameStateKey;
+    const savedState = this.errorHandler.safeStorageOperation(
+      () => localStorage.getItem(storageKey),
+      null,
+      'Failed to load game state'
+    );
+    return savedState != null && savedState.length > 0;
   }
 
   private clearSavedGameState(): void {
@@ -557,7 +603,7 @@ export class GameStateManagerService {
    * Utility methods
    */
   private generateGameId(): string {
-    return `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `game_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   private initializeDefaultState(): void {
@@ -574,6 +620,7 @@ export class GameStateManagerService {
    */
   public destroy(): void {
     this.stopTimer();
+    this.cancelPendingTimeouts();
     this._gameWon$.complete();
     this._cardFlipped$.complete();
     this._matchFound$.complete();
