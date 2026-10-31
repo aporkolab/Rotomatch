@@ -8,6 +8,7 @@ import { GameLogicService } from 'src/app/service/game-logic.service';
 import { AchievementsService } from 'src/app/services/achievements.service';
 import { GameStateManagerService } from 'src/app/services/game-state-manager.service';
 import { HomeComponent } from './home.component';
+import { GameDifficulty } from 'src/app/types/game.types';
 
 describe('HomeComponent', () => {
   let component: HomeComponent;
@@ -79,5 +80,35 @@ describe('HomeComponent', () => {
       expect.stringContaining(`${value} cards`),
       'Game Settings'
     );
+  });
+
+  it('should start a game with the chosen settings and go to the board', async () => {
+    const gameLogic = TestBed.inject(GameLogicService) as MockedObject<GameLogicService>;
+    const router = TestBed.inject(Router) as MockedObject<Router>;
+    component.selectDeckSize(8);
+    component.selectDifficulty(GameDifficulty.HARD);
+
+    await component.startGame();
+
+    void expect(gameLogic.newGame).toHaveBeenCalledWith(8, GameDifficulty.HARD);
+    void expect(router.navigate).toHaveBeenCalledWith(['/game']);
+  });
+
+  it('should warn instead of starting without a difficulty', async () => {
+    const gameLogic = TestBed.inject(GameLogicService) as MockedObject<GameLogicService>;
+    component.selectedDifficulty = null;
+
+    await component.startGame();
+
+    void expect(gameLogic.newGame).not.toHaveBeenCalled();
+    void expect(notificationService.showWarning).toHaveBeenCalled();
+  });
+
+  it('should only peek for a saved game on load, never restore it', () => {
+    const gameLogic = TestBed.inject(GameLogicService) as MockedObject<GameLogicService>;
+    const manager = TestBed.inject(GameStateManagerService) as MockedObject<GameStateManagerService>;
+
+    void expect(manager.hasSavedGame).toHaveBeenCalled();
+    void expect(gameLogic.loadSavedGame).not.toHaveBeenCalled();
   });
 });
