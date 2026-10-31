@@ -3,7 +3,6 @@ import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { GameLogicService } from './game-logic.service';
-import { GameStateService } from './game-state.service';
 import { NotificationService } from './notification.service';
 import { Card } from '../model/card';
 
@@ -27,17 +26,10 @@ describe('GameLogicService', () => {
       showLoading: vi.fn().mockName('NotificationService.showLoading'),
       clearAll: vi.fn().mockName('NotificationService.clearAll')
     };
-    const gameStateSpy = {
-      changeNewGameWanted: vi.fn().mockName('GameStateService.changeNewGameWanted')
-    };
 
     await TestBed.configureTestingModule({
       imports: [HttpClientTestingModule, RouterTestingModule],
-      providers: [
-        GameLogicService,
-        { provide: NotificationService, useValue: notificationSpy },
-        { provide: GameStateService, useValue: gameStateSpy }
-      ]
+      providers: [GameLogicService, { provide: NotificationService, useValue: notificationSpy }]
     }).compileComponents();
 
     service = TestBed.inject(GameLogicService);

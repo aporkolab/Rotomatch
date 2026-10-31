@@ -125,12 +125,8 @@ export class HomeComponent implements OnInit, OnDestroy {
    * Checks if there's a saved game
    */
   private checkForSavedGame(): void {
-    // This would check if there's a saved game state
-    this.hasSavedGame = this.gameLogic.loadSavedGame();
-    // Reset the state since we're just checking
-    if (this.hasSavedGame) {
-      // Load saved game to restore state, but don't start the game
-    }
+    // Only peek at storage: loading here would restore the game and start its timer.
+    this.hasSavedGame = this.gameStateManager.hasSavedGame();
   }
 
   /**

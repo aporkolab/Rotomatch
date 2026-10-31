@@ -1,20 +1,34 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
-import { Card } from 'src/app/model/card';
-import { Subscription } from 'rxjs';
-import { GameStateService } from 'src/app/service/game-state.service';
-import { GameLogicService } from 'src/app/service/game-logic.service';
-import { BsModalService, BsModalRef } from 'ngx-bootstrap/modal';
-import { TemplateRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  TemplateRef,
+  computed,
+  inject,
+  signal
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { BsModalService, BsModalRef } from 'ngx-bootstrap/modal';
+import { Card } from 'src/app/model/card';
+import { GameLogicService } from 'src/app/service/game-logic.service';
+import { GameStateManagerService } from 'src/app/services/game-state-manager.service';
+import { GameDifficulty } from 'src/app/types/game.types';
+
+/** Deck used when /game is opened directly, with neither a running nor a saved game. */
+const DEFAULT_DECK_SIZE = 12;
+
+/** Every face-down card looks the same; anything derived from the card would give pairs away. */
+const CARD_FRONT_GRADIENT = 'linear-gradient(135deg, hsl(220, 20%, 25%), hsl(220, 25%, 35%))';
 
 @Component({
   selector: 'app-game',
   templateUrl: './game.component.html',
   styleUrls: ['./game.component.scss'],
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   animations: [
     trigger('celebrationAnimation', [
@@ -25,45 +39,57 @@ import { trigger, transition, style, animate } from '@angular/animations';
     ])
   ]
 })
-export class GameComponent implements OnInit, OnDestroy {
-  public deckSize = 0;
-  private readonly subscriptions = new Subscription();
+export class GameComponent implements OnInit {
+  public readonly gameLogic = inject(GameLogicService);
+  private readonly gameStateManager = inject(GameStateManagerService);
+  private readonly modalService = inject(BsModalService);
+  private readonly destroyRef = inject(DestroyRef);
+
   public modalRef?: BsModalRef;
 
-  public bestResults: { [key: number]: number } = {};
+  private readonly bestResults = signal<{ [deckSize: number]: number }>({});
+  private readonly newBestScore = signal(false);
 
-  public constructor(
-    private readonly data: GameStateService,
-    public gameLogic: GameLogicService,
-    private readonly modalService: BsModalService
-  ) {}
+  public readonly cards = this.gameLogic.cards;
+  public readonly isProcessing = this.gameLogic.isProcessing;
+  public readonly currentAttempts = this.gameLogic.score;
+  public readonly gameTimer = this.gameStateManager.gameTimer;
+  public readonly isPaused = this.gameStateManager.isPaused;
+  public readonly isGameActive = this.gameStateManager.isGameActive;
+  public readonly cardFrontGradient = CARD_FRONT_GRADIENT;
+
+  public readonly deckSize = computed(() => this.gameStateManager.currentSession()?.settings.deckSize ?? 0);
+  private readonly difficulty = computed(
+    () => this.gameStateManager.currentSession()?.settings.difficulty ?? GameDifficulty.EASY
+  );
+
+  public readonly gameProgress = computed(() => {
+    const cards = this.cards();
+    if (cards.length === 0) return 0;
+    return (cards.filter(card => card.matched).length / cards.length) * 100;
+  });
+
+  public readonly isGameWon = computed(() => {
+    const cards = this.cards();
+    return cards.length > 0 && cards.every(card => card.matched);
+  });
+
+  // Make Math available in template
+  public readonly Math = Math;
 
   public ngOnInit(): void {
-    const deckSizeSub = this.data.currentSelectedDeckSize.subscribe(deckSize => {
-      if (deckSize > 0) {
-        this.deckSize = deckSize;
-        void this.restartGame();
-      }
-    });
-    this.subscriptions.add(deckSizeSub);
+    if (this.gameStateManager.currentSession() == null && !this.gameLogic.loadSavedGame()) {
+      void this.gameLogic.newGame(DEFAULT_DECK_SIZE);
+    }
 
-    const newGameSub = this.data.currentNewGameWanted.subscribe(isANewGameWanted => {
-      if (isANewGameWanted) {
-        void this.restartGame();
-      }
-    });
-    this.subscriptions.add(newGameSub);
-
-    const gameWonSub = this.gameLogic.gameWon$.subscribe(() => {
+    this.gameLogic.gameWon$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(stats => {
+      // Compare against the best score as it was before this game was recorded.
+      const previousBest = this.bestResults()[stats.deckSize] ?? 0;
+      this.newBestScore.set(previousBest === 0 || stats.attempts < previousBest);
       this.loadBestScore();
     });
-    this.subscriptions.add(gameWonSub);
 
     this.loadBestScore();
-  }
-
-  public ngOnDestroy(): void {
-    this.subscriptions.unsubscribe();
   }
 
   public openModal(template: TemplateRef<object>): void {
@@ -71,20 +97,20 @@ export class GameComponent implements OnInit, OnDestroy {
   }
 
   private loadBestScore(): void {
-    this.bestResults = this.gameLogic.loadBestResults();
+    this.bestResults.set(this.gameLogic.loadBestResults());
   }
 
   public getBestScoreForCurrentDeck(): number {
-    if (this.bestResults == null || this.deckSize <= 0) {
-      return 0;
-    }
-    return this.bestResults[this.deckSize] ?? 0;
+    const deckSize = this.deckSize();
+    return deckSize > 0 ? (this.bestResults()[deckSize] ?? 0) : 0;
   }
 
   public restartGame(): void {
     this.modalRef?.hide();
-    if (this.deckSize > 0) {
-      void this.gameLogic.newGame(this.deckSize);
+    const deckSize = this.deckSize();
+    if (deckSize > 0) {
+      this.newBestScore.set(false);
+      void this.gameLogic.newGame(deckSize, this.difficulty());
       this.loadBestScore();
     }
   }
@@ -93,54 +119,14 @@ export class GameComponent implements OnInit, OnDestroy {
     this.gameLogic.revealCard(card);
   }
 
-  public trackByCardId(index: number, card: Card): number | string {
-    return card.id;
-  }
-
-  public trackByIndex(index: number): number {
-    return index;
-  }
-
-  public getGameStatusClass(): string {
-    // Placeholder method for template compatibility
-    return 'game-active';
-  }
-
-  public getStatusIcon(): string {
-    return 'fas fa-gamepad';
-  }
-
-  public getStatusTitle(): string {
-    return 'Memory Game';
-  }
-
-  public getStatusSubtitle(): string {
-    return 'Match all cards to win!';
-  }
-
-  public gameTimer(): number {
-    return 0; // TODO: Implement timer
-  }
-
-  public isGameActive(): boolean {
-    return true; // TODO: Implement game state
+  public togglePause(): void {
+    this.gameLogic.togglePause();
   }
 
   public formatTime(time: number): string {
     const minutes = Math.floor(time / 60);
     const seconds = time % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
-
-  public currentAttempts(): number {
-    return this.gameLogic.score();
-  }
-
-  public gameProgress(): number {
-    const cards = this.cards();
-    if (cards.length === 0) return 0;
-    const matchedCards = cards.filter(card => card.matched).length;
-    return (matchedCards / cards.length) * 100;
   }
 
   public getProgressRingColor(): string {
@@ -150,59 +136,24 @@ export class GameComponent implements OnInit, OnDestroy {
     return '#48dbfb';
   }
 
-  public isPaused(): boolean {
-    return false; // TODO: Implement pause functionality
-  }
-
-  public togglePause(): void {
-    // TODO: Implement pause functionality
-  }
-
-  public isProcessing(): boolean {
-    return this.gameLogic.isProcessing();
-  }
-
-  public cards(): Card[] {
-    return this.gameLogic.cards();
-  }
-
-  public shouldAnimateCardIn(_index: number): boolean {
-    return true; // Simple animation trigger
-  }
-
   public isCardBeingProcessed(card: Card): boolean {
     return card.flipped && !card.matched;
   }
 
   public canFlipCard(): boolean {
-    return !this.isProcessing();
+    return !this.isProcessing() && !this.isPaused();
   }
 
-  public getCardAriaLabel(card: Card): string {
+  public getCardAriaLabel(card: Card, position: number): string {
+    // Hidden cards are labelled by position only: the id ("3" / "3_pair")
+    // would tell a screen reader user which cards belong together.
     if (card.flipped) {
-      return `Card ${card.name}, revealed`;
+      return `Card ${position + 1}, ${card.name}, revealed`;
     }
-    return `Card ${card.id}, hidden`;
-  }
-
-  public getCardFrontGradient(card: Card): string {
-    // Generate a subtle gradient based on card ID
-    const cardIdNum = typeof card.id === 'string' ? parseInt(card.id, 10) || 1 : card.id;
-    const hue = (cardIdNum * 137) % 360;
-    return `linear-gradient(135deg, hsl(${hue}, 20%, 25%), hsl(${hue}, 25%, 35%))`;
-  }
-
-  public isGameWon(): boolean {
-    const cards = this.cards();
-    return cards.length > 0 && cards.every(card => card.matched);
+    return `Card ${position + 1}, hidden`;
   }
 
   public isNewBestScore(): boolean {
-    const current = this.currentAttempts();
-    const best = this.getBestScoreForCurrentDeck();
-    return best === 0 || current < best;
+    return this.newBestScore();
   }
-
-  // Make Math available in template
-  public Math = Math;
 }

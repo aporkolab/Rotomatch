@@ -3,7 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of } from 'rxjs';
-import { GameStateService } from 'src/app/service/game-state.service';
 import { NotificationService } from 'src/app/service/notification.service';
 import { GameLogicService } from 'src/app/service/game-logic.service';
 import { AchievementsService } from 'src/app/services/achievements.service';
@@ -16,9 +15,6 @@ describe('HomeComponent', () => {
   let notificationService: MockedObject<NotificationService>;
 
   beforeEach(async () => {
-    const gameStateSpy = {
-      selectDeckSize: vi.fn().mockName('GameStateService.selectDeckSize')
-    };
     const notificationSpy = {
       showInfo: vi.fn().mockName('NotificationService.showInfo'),
       showWarning: vi.fn().mockName('NotificationService.showWarning'),
@@ -36,7 +32,8 @@ describe('HomeComponent', () => {
     achievementsSpy.getDetailedStats.mockReturnValue({});
     achievementsSpy.unlockedCount.mockReturnValue(0);
     const gameStateManagerSpy = {
-      loadGameState: vi.fn().mockName('GameStateManagerService.loadGameState')
+      loadGameState: vi.fn().mockName('GameStateManagerService.loadGameState'),
+      hasSavedGame: vi.fn().mockName('GameStateManagerService.hasSavedGame')
     };
 
     const routerSpy = {
@@ -51,7 +48,6 @@ describe('HomeComponent', () => {
     await TestBed.configureTestingModule({
       imports: [HomeComponent, HttpClientTestingModule],
       providers: [
-        { provide: GameStateService, useValue: gameStateSpy },
         { provide: Router, useValue: routerSpy },
         { provide: ActivatedRoute, useValue: activatedRouteMock },
         { provide: NotificationService, useValue: notificationSpy },
